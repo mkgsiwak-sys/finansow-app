@@ -1,11 +1,15 @@
-# Etap 1: Budowanie aplikacji za pomocą Maven i JDK 17
+# Etap 1: Budowanie aplikacji za pomocą Maven Wrapper i JDK 17
 FROM eclipse-temurin:17-jdk-jammy as builder
 WORKDIR /app
-COPY pom.xml .
+# Skopiuj wrapper i pliki projektu
 COPY .mvn/ .mvn/
-RUN mvn dependency:go-offline -B
+COPY mvnw .
+COPY pom.xml .
+# Uruchom pobieranie zależności za pomocą wrappera
+RUN ./mvnw dependency:go-offline -B
 COPY src/ ./src/
-RUN mvn package -DskipTests -Dmaven.main.skip=true
+# Uruchom budowanie za pomocą wrappera
+RUN ./mvnw package -DskipTests -Dmaven.main.skip=true
 
 # Etap 2: Uruchomienie aplikacji w lekkim środowisku JRE 17
 FROM eclipse-temurin:17-jre-jammy
