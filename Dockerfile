@@ -5,16 +5,13 @@ WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw .
 COPY pom.xml .
-
-# --- DODANA LINIA: Nadaj uprawnienia wykonywania ---
+# Nadaj uprawnienia wykonywania
 RUN chmod +x mvnw
-# --- KONIEC DODANEJ LINII ---
-
 # Uruchom pobieranie zależności za pomocą wrappera
 RUN ./mvnw dependency:go-offline -B
 COPY src/ ./src/
-# Uruchom budowanie za pomocą wrappera
-RUN ./mvnw package -DskipTests -Dmaven.main.skip=true
+# Uruchom budowanie za pomocą wrappera - USUNIĘTO -Dmaven.main.skip=true
+RUN ./mvnw package -DskipTests
 
 # Etap 2: Uruchomienie aplikacji w lekkim środowisku JRE 17
 FROM eclipse-temurin:17-jre-jammy
