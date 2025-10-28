@@ -5,6 +5,11 @@ WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw .
 COPY pom.xml .
+
+# --- DODANA LINIA: Nadaj uprawnienia wykonywania ---
+RUN chmod +x mvnw
+# --- KONIEC DODANEJ LINII ---
+
 # Uruchom pobieranie zależności za pomocą wrappera
 RUN ./mvnw dependency:go-offline -B
 COPY src/ ./src/
