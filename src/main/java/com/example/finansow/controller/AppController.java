@@ -23,7 +23,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
-import java.util.Comparator; 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -42,7 +42,7 @@ public class AppController {
     @Autowired private RecurringService recurringService; // DODANE
 
     private static final String[] PERSON_COLORS = {
-        "bg-indigo-500", "bg-pink-500", "bg-green-500", "bg-yellow-500", "bg-red-500", "bg-blue-500"
+            "bg-indigo-500", "bg-pink-500", "bg-green-500", "bg-yellow-500", "bg-red-500", "bg-blue-500"
     };
 
     @GetMapping("/")
@@ -86,15 +86,25 @@ public class AppController {
             LocalDate endDate = currentMonth.atEndOfMonth();
 
             // *** 1. WYWOŁANIE GENERATORA CYKLICZNEGO PRZEZ SERWIS ***
-            recurringService.generateRecurringItems(activePerson.getId(), currentMonth); 
-            
+            recurringService.generateRecurringItems(activePerson.getId(), currentMonth);
+
             // A. Transakcje z danego miesiąca (do bilansu)
             List<Transaction> transactions = transactionRepository.findByPersonIdAndDateBetween(activePerson.getId(), startDate, endDate);
 
             // B. Niezapłacone wydatki Z TERMINEM w tym miesiącu
+            // <<< POPRAWKA LITERÓWKI: activePortId() -> activePerson.getId() >>>
             List<Transaction> unpaidExpenses = transactionRepository.findByPersonIdAndPaidAndDueDateBetween(activePerson.getId(), false, startDate, endDate);
-            model.addAttribute("unpaidExpenses", unpaidExpenses);
-            
+
+            // <<< POCZĄTEK POPRAWKI >>>
+            // Przeniesienie logiki sumowania z Thymeleaf do kontrolera
+            BigDecimal totalUnpaid = unpaidExpenses.stream()
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            model.addAttribute("unpaidExpenses", unpaidExpenses); // Przekaż listę
+            model.addAttribute("totalUnpaidExpenses", totalUnpaid); // Przekaż obliczoną sumę
+            // <<< KONIEC POPRAWKI >>>
+
             // C. Zadania Z TERMINEM w tym miesiącu
             List<Task> tasks = taskRepository.findByAssigneeIdAndDateBetween(activePerson.getId(), startDate, endDate);
 
@@ -106,7 +116,7 @@ public class AppController {
 
             // F. DODANE: Pobranie wszystkich aktywnych/niezakończonych zadań
             List<Task> openTasks = taskRepository.findByAssigneeIdAndCompleted(activePerson.getId(), false);
-            model.addAttribute("openTasks", openTasks); 
+            model.addAttribute("openTasks", openTasks);
 
             // Przekaż listy do widoku (dla formularzy i list na dole strony)
             model.addAttribute("transactions", transactions);
@@ -134,7 +144,7 @@ public class AppController {
             BigDecimal cumulativeBalance = allPostedTransactions.stream()
                     .map(t -> t.getType() == TransactionType.INCOME ? t.getAmount() : t.getAmount().negate())
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            model.addAttribute("cumulativeBalance", cumulativeBalance); 
+            model.addAttribute("cumulativeBalance", cumulativeBalance);
 
             // --- 4. Budowanie Kalendarza ---
             List<List<CalendarDay>> calendarGrid = buildCalendarGrid(currentMonth, tasks, unpaidExpenses, recurringTransactions, recurringTasks);
@@ -175,11 +185,11 @@ public class AppController {
             String actionUrl = String.format("/toggle-completed?id=%d&month=%s", t.getId(), YearMonth.from(date).toString());
             events.add(new DayEvent(t.getDescription(), "ZADANIE", details, t.isCompleted() ? "text-gray-500" : "text-blue-600", actionUrl, 2));
         }
-        
+
         // 3. Płatności Stałe (Niski Priorytet: 3)
         for (RecurringTransaction rt : recurringPayments) {
             String details = String.format("%s %s PLN (Generacja)", rt.getType().toString(), rt.getAmount().toString());
-            events.add(new DayEvent(rt.getDescription(), "STAŁA PŁATNOŚĆ", details, "text-purple-600", null, 3));
+            events.add(new DayEvent(rt.getDescription(), "STAŁA PŁATNOĆ", details, "text-purple-600", null, 3));
         }
 
         events.sort(Comparator.comparingInt(DayEvent::getPriority));
@@ -192,7 +202,7 @@ public class AppController {
     private List<List<CalendarDay>> buildCalendarGrid(YearMonth month, List<Task> tasks, List<Transaction> unpaidExpenses, List<RecurringTransaction> recurringPayments, List<RecurringTask> recurringTasks) {
         List<List<CalendarDay>> calendarGrid = new ArrayList<>();
         LocalDate firstDayOfMonth = month.atDay(1);
-        int firstDayOfWeekValue = firstDayOfMonth.getDayOfWeek().getValue(); 
+        int firstDayOfWeekValue = firstDayOfMonth.getDayOfWeek().getValue();
 
         LocalDate startDate = firstDayOfMonth.minusDays(firstDayOfWeekValue - 1);
 
@@ -207,7 +217,7 @@ public class AppController {
                 currentDate = currentDate.plusDays(1);
             }
             calendarGrid.add(week);
-            
+
             // Optymalizacja: Usuń puste rzędy
             if (!currentDate.getMonth().equals(month.getMonth()) && i >= 3) {
                 boolean weekInCurrentMonth = week.stream().anyMatch(CalendarDay::isCurrentMonth);
@@ -237,28 +247,28 @@ public class AppController {
                 .forEach(day::addRecurringPayment);
 
         allRecurringTasks.stream()
-            .filter(rt -> {
-                if (rt.getRecurrenceType() == RecurrenceType.DAILY) {
-                    return false;
-                }
-                if (rt.getRecurrenceType() == RecurrenceType.MONTHLY) {
-                    return rt.getDayOfMonth() == date.getDayOfMonth();
-                }
-                if (rt.getRecurrenceType() == RecurrenceType.WEEKLY) {
-                    switch (dayOfWeek) {
-                        case MONDAY: return rt.isOnMonday();
-                        case TUESDAY: return rt.isOnTuesday();
-                        case WEDNESDAY: return rt.isOnWednesday();
-                        case THURSDAY: return rt.isOnThursday();
-                        case FRIDAY: return rt.isOnFriday();
-                        case SATURDAY: return rt.isOnSaturday();
-                        case SUNDAY: return rt.isOnSunday();
-                        default: return false;
+                .filter(rt -> {
+                    if (rt.getRecurrenceType() == RecurrenceType.DAILY) {
+                        return false;
                     }
-                }
-                return false;
-            })
-            .forEach(day::addRecurringTask);
+                    if (rt.getRecurrenceType() == RecurrenceType.MONTHLY) {
+                        return rt.getDayOfMonth() == date.getDayOfMonth();
+                    }
+                    if (rt.getRecurrenceType() == RecurrenceType.WEEKLY) {
+                        switch (dayOfWeek) {
+                            case MONDAY: return rt.isOnMonday();
+                            case TUESDAY: return rt.isOnTuesday();
+                            case WEDNESDAY: return rt.isOnWednesday();
+                            case THURSDAY: return rt.isOnThursday();
+                            case FRIDAY: return rt.isOnFriday();
+                            case SATURDAY: return rt.isOnSaturday();
+                            case SUNDAY: return rt.isOnSunday();
+                            default: return false;
+                        }
+                    }
+                    return false;
+                })
+                .forEach(day::addRecurringTask);
     }
 
     // Metody do obsługi Osób
@@ -397,7 +407,7 @@ public class AppController {
             if (recurrenceType == RecurrenceType.MONTHLY) {
                 rt.setDayOfMonth(dayOfMonth != null ? dayOfMonth : 1);
             } else {
-                 rt.setDayOfMonth(0);
+                rt.setDayOfMonth(0);
             }
 
             if (recurrenceType == RecurrenceType.WEEKLY) {
@@ -427,11 +437,11 @@ public class AppController {
     @PostMapping("/archive-data")
     public String archiveData(@RequestParam(name = "personId") Long personId) {
         LocalDate archiveBeforeDate = LocalDate.now().minusMonths(6);
-        
+
         // 1. Usuń stare Transakcje (starsze niż 6 miesięcy)
         List<Transaction> oldTransactions = transactionRepository.findByPersonIdAndDateBefore(personId, archiveBeforeDate);
         transactionRepository.deleteAll(oldTransactions);
-        
+
         // 2. Usuń stare, zakończone Zadania (starsze niż 6 miesięcy)
         List<Task> oldCompletedTasks = taskRepository.findByAssigneeIdAndCompletedAndDateBefore(personId, true, archiveBeforeDate);
         taskRepository.deleteAll(oldCompletedTasks);
