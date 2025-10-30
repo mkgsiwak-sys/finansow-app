@@ -18,8 +18,12 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     // Dla Generatora Cyklicznych Zadań (sprawdza, czy już wygenerowano dla danej reguły)
     boolean existsByAssigneeIdAndRecurringOriginIdAndDate(
-        Long assigneeId, Long recurringOriginId, LocalDate date);
-    
+            Long assigneeId, Long recurringOriginId, LocalDate date);
+
     // DODANE: Dla Archiwizacji (znajdź ukończone zadania starsze niż X data)
     List<Task> findByAssigneeIdAndCompletedAndDateBefore(Long assigneeId, boolean completed, LocalDate date);
+
+    // <<< NOWE METODY DO USUWANIA OSOBY >>>
+    void deleteAllByAssigneeId(Long assigneeId);
+    void deleteAllByAssignerId(Long assignerId);
 }

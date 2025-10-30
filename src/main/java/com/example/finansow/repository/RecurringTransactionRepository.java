@@ -13,6 +13,8 @@ public interface RecurringTransactionRepository extends JpaRepository<RecurringT
     List<RecurringTransaction> findByPersonId(Long personId);
 
     // POPRAWIONA NAZWA METODY: Znajdź wszystkie stałe transakcje, które mają się wygenerować danego dnia miesiąca
-    List<RecurringTransaction> findByDayOfMonthToGenerate(int dayOfMonthToGenerate); 
-}
+    List<RecurringTransaction> findByDayOfMonthToGenerate(int dayOfMonthToGenerate);
 
+    // <<< NOWA METODA DO USUWANIA OSOBY >>>
+    void deleteAllByPersonId(Long personId);
+}

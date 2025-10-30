@@ -15,10 +15,10 @@ public interface RecurringTaskRepository extends JpaRepository<RecurringTask, Lo
 
     // Znajdź wszystkie zadania z danym typem powtórzenia (np. wszystkie DAILY)
     List<RecurringTask> findByRecurrenceType(RecurrenceType type);
-    
+
     // Znajdź zadania miesięczne na dany dzień
     List<RecurringTask> findByRecurrenceTypeAndDayOfMonth(RecurrenceType type, int dayOfMonth);
-    
+
     // Znajdź zadania cotygodniowe
     List<RecurringTask> findByRecurrenceTypeAndOnMonday(RecurrenceType type, boolean onMonday);
     List<RecurringTask> findByRecurrenceTypeAndOnTuesday(RecurrenceType type, boolean onTuesday);
@@ -27,4 +27,8 @@ public interface RecurringTaskRepository extends JpaRepository<RecurringTask, Lo
     List<RecurringTask> findByRecurrenceTypeAndOnFriday(RecurrenceType type, boolean onFriday);
     List<RecurringTask> findByRecurrenceTypeAndOnSaturday(RecurrenceType type, boolean onSaturday);
     List<RecurringTask> findByRecurrenceTypeAndOnSunday(RecurrenceType type, boolean onSunday);
+
+    // <<< NOWE METODY DO USUWANIA OSOBY >>>
+    void deleteAllByAssigneeId(Long assigneeId);
+    void deleteAllByAssignerId(Long assignerId);
 }

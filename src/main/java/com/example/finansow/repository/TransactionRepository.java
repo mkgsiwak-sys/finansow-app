@@ -21,5 +21,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     // POPRAWKA: Dla Generatora Stałych Transakcji (Użycie RecurringOriginId)
     boolean existsByPersonIdAndRecurringOriginIdAndDateBetween(
-        Long personId, Long recurringOriginId, LocalDate startDate, LocalDate endDate);
+            Long personId, Long recurringOriginId, LocalDate startDate, LocalDate endDate);
+
+    // <<< NOWA METODA DO USUWANIA OSOBY >>>
+    void deleteAllByPersonId(Long personId);
 }

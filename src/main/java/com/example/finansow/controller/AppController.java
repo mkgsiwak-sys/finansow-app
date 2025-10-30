@@ -2,10 +2,11 @@ package com.example.finansow.controller;
 
 import com.example.finansow.model.*;
 import com.example.finansow.repository.*;
-import com.example.finansow.service.RecurringService; // DODANE
+import com.example.finansow.service.RecurringService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional; // <<< DODAJ TEN IMPORT
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,7 +40,7 @@ public class AppController {
     @Autowired private TaskRepository taskRepository;
     @Autowired private RecurringTransactionRepository recurringTransactionRepo;
     @Autowired private RecurringTaskRepository recurringTaskRepo;
-    @Autowired private RecurringService recurringService; // DODANE
+    @Autowired private RecurringService recurringService;
 
     private static final String[] PERSON_COLORS = {
             "bg-indigo-500", "bg-pink-500", "bg-green-500", "bg-yellow-500", "bg-red-500", "bg-blue-500"
@@ -92,10 +93,8 @@ public class AppController {
             List<Transaction> transactions = transactionRepository.findByPersonIdAndDateBetween(activePerson.getId(), startDate, endDate);
 
             // B. Niezapłacone wydatki Z TERMINEM w tym miesiącu
-            // <<< POPRAWKA LITERÓWKI: activePortId() -> activePerson.getId() >>>
             List<Transaction> unpaidExpenses = transactionRepository.findByPersonIdAndPaidAndDueDateBetween(activePerson.getId(), false, startDate, endDate);
 
-            // <<< POCZĄTEK POPRAWKI >>>
             // Przeniesienie logiki sumowania z Thymeleaf do kontrolera
             BigDecimal totalUnpaid = unpaidExpenses.stream()
                     .map(Transaction::getAmount)
@@ -103,7 +102,6 @@ public class AppController {
 
             model.addAttribute("unpaidExpenses", unpaidExpenses); // Przekaż listę
             model.addAttribute("totalUnpaidExpenses", totalUnpaid); // Przekaż obliczoną sumę
-            // <<< KONIEC POPRAWKI >>>
 
             // C. Zadania Z TERMINEM w tym miesiącu
             List<Task> tasks = taskRepository.findByAssigneeIdAndDateBetween(activePerson.getId(), startDate, endDate);
@@ -189,7 +187,7 @@ public class AppController {
         // 3. Płatności Stałe (Niski Priorytet: 3)
         for (RecurringTransaction rt : recurringPayments) {
             String details = String.format("%s %s PLN (Generacja)", rt.getType().toString(), rt.getAmount().toString());
-            events.add(new DayEvent(rt.getDescription(), "STAŁA PŁATNOĆ", details, "text-purple-600", null, 3));
+            events.add(new DayEvent(rt.getDescription(), "STAŁA PŁATNOŚĆ", details, "text-purple-600", null, 3));
         }
 
         events.sort(Comparator.comparingInt(DayEvent::getPriority));
@@ -281,6 +279,40 @@ public class AppController {
         }
         return "redirect:/";
     }
+
+    // <<< NOWA METODA DO USUWANIA OSOBY (KASKADOWO) >>>
+    @Transactional
+    @GetMapping("/delete-person")
+    public String deletePerson(@RequestParam(name = "id") Long personId) {
+
+        // 1. Sprawdź, czy osoba istnieje
+        Optional<Person> personOpt = personRepository.findById(personId);
+        if (personOpt.isPresent()) {
+
+            // 2. Usuń wszystkie powiązane dane (kolejność nie ma znaczenia dzięki @Transactional)
+
+            // Usuń transakcje
+            transactionRepository.deleteAllByPersonId(personId);
+
+            // Usuń stałe transakcje
+            recurringTransactionRepo.deleteAllByPersonId(personId);
+
+            // Usuń zadania (gdzie jest wykonawcą LUB zleceniodawcą)
+            taskRepository.deleteAllByAssigneeId(personId);
+            taskRepository.deleteAllByAssignerId(personId);
+
+            // Usuń cykliczne zadania (gdzie jest wykonawcą LUB zleceniodawcą)
+            recurringTaskRepo.deleteAllByAssigneeId(personId);
+            recurringTaskRepo.deleteAllByAssignerId(personId);
+
+            // 3. Usuń samą osobę
+            personRepository.deleteById(personId);
+        }
+
+        // 4. Przekieruj na stronę główną (bez aktywnej osoby)
+        return "redirect:/";
+    }
+
 
     // Metody do obsługi Transakcji
     @PostMapping("/add-transaction")
