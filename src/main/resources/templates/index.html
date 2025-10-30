@@ -8,54 +8,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    
+
     <style>
         body {
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f4f6f8; /* Miękkie tło */
             min-height: 100vh;
-            padding-top: 64px; 
+            padding-top: 64px;
             transition: background-color 0.3s, color 0.3s;
         }
 
         /* Usunięto style dark mode */
-        
+
         /* Ukryj oryginalny sidebar */
         .flex.min-h-screen > div:first-child { display: none !important; }
         .flex-1.ml-64 { margin-left: 0 !important; }
 
         /* --- KALENDARZ --- */
         .hidden-options { display: none; }
-        .today { background-color: #e0f2fe !important; } 
-        .other-month { background-color: #f3f4f6; color: #9ca3af; } 
+        .today { background-color: #e0f2fe !important; }
+        .other-month { background-color: #f3f4f6; color: #9ca3af; }
 
         /* Klasa bazowa dla komórki kalendarza */
-        .calendar-day { 
-            aspect-ratio: 1 / 1; 
-            padding: 6px; 
+        .calendar-day {
+            aspect-ratio: 1 / 1;
+            padding: 6px;
             transition: all 0.3s ease;
             position: relative;
             display: flex;
             flex-direction: column;
-            justify-content: space-between; 
-            font-size: 0.75rem; 
+            justify-content: space-between;
+            font-size: 0.75rem;
         }
-        
+
         /* --- TRYB POMNIEJSZONY (KWADRATOWY) --- */
         .minimized-calendar-view .calendar-day {
-            min-height: 80px; 
+            min-height: 80px;
         }
         .minimized-calendar-view .event-list {
-            display: none; 
+            display: none;
         }
         .minimized-calendar-view .other-month {
-             visibility: visible; 
-             opacity: 0.5;
+            visibility: visible;
+            opacity: 0.5;
         }
         .minimized-calendar-view .event-dots {
             display: flex;
             gap: 2px;
-            justify-content: flex-start; 
+            justify-content: flex-start;
         }
         .event-dot {
             width: 6px;
@@ -63,40 +63,40 @@
             border-radius: 50%;
             flex-shrink: 0;
         }
-        
+
         /* --- TRYB POWIĘKSZONY (PEŁNY) --- */
         .full-calendar-view .calendar-day {
-            min-height: 120px; 
-            aspect-ratio: auto; 
-            overflow: visible; 
-            justify-content: flex-start; 
+            min-height: 120px;
+            aspect-ratio: auto;
+            overflow: visible;
+            justify-content: flex-start;
         }
         .full-calendar-view .event-list {
             display: block;
-            max-height: 100px; 
-            overflow-y: auto; 
+            max-height: 100px;
+            overflow-y: auto;
         }
         .full-calendar-view .other-month {
             visibility: visible;
             opacity: 1;
         }
         .full-calendar-view .event-dots {
-             display: none; 
+            display: none;
         }
-        
+
         /* Nagłówek Kalendarza */
         .calendar-header {
-             display: grid;
-             grid-template-columns: repeat(7, 1fr);
-             text-align: center;
-             font-weight: 600;
-             color: #64748b;
-             border-bottom: 1px solid #e2e8f0;
-             padding-bottom: 8px;
-             margin-bottom: 4px;
-             font-size: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
         }
-        
+
         /* Style dla prawej kolumny w trybie 'pomniejszonym' */
         .forms-right-sidebar {
             transition: all 0.5s ease-in-out;
@@ -111,290 +111,227 @@
     </style>
 </head>
 <body class="bg-transparent">
-    <nav class="fixed top-0 left-0 right-0 h-16 bg-white shadow-md border-b border-gray-100 z-50"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex justify-between items-center">
-            
-            <div class="flex items-center space-x-4">
-                <i data-lucide="scale" class="w-7 h-7 text-indigo-600"></i>
-                <span class="text-xl font-bold text-gray-900">Asystent Finansów</span> 
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                
-                <div class="relative">
-                    <select onchange="window.location.href=this.value" class="p-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-indigo-500 focus:border-indigo-500 bg-white"> 
-                        <option value="#" disabled>Wybierz Osobę</option>
-                        <option th:each="person : ${people}" 
-                                th:value="@{'/'(activePersonId=${person.id}, month=${currentMonth})}"
-                                th:text="${person.name}"
-                                th:selected="${activePerson != null && person.id == activePerson.id}">Anna Kowalska</option>
-                    </select>
-                </div>
+<nav class="fixed top-0 left-0 right-0 h-16 bg-white shadow-md border-b border-gray-100 z-50"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex justify-between items-center">
 
-                <button onclick="toggleAddPersonForm()" class="p-2.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition shadow-md" title="Dodaj nową osobę">
-                    <i data-lucide="user-plus" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </div>
-    </nav>
-    
-    <div id="addPersonFormContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
-        <form id="addPersonForm" th:action="@{/add-person}" method="POST" class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm"> <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                     <i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i> Dodaj Nową Osobę
-                </h3>
-                <button type="button" onclick="toggleAddPersonForm()" class="text-gray-400 hover:text-gray-600">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Imię</label>
-                <input type="text" name="name" placeholder="Imię osoby..." class="w-full p-3 border border-gray-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" required> </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white p-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg">Zapisz</button>
-        </form>
+    <div class="flex items-center space-x-4">
+        <i data-lucide="scale" class="w-7 h-7 text-indigo-600"></i>
+        <span class="text-xl font-bold text-gray-900">Asystent Finansów</span>
     </div>
 
-    <div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <div th:if="${activePerson == null}" class="text-center p-12 bg-white rounded-3xl shadow-xl mt-12"> <i data-lucide="sparkles" class="w-12 h-12 text-indigo-400 mx-auto mb-4"></i>
-            <h2 class="text-3xl font-bold text-gray-800">Witaj w Asystencie Finansów!</h2>
-            <p class="text-gray-500 mt-3 text-lg">Aby zacząć, dodaj pierwszą osobę za pomocą przycisku "Dodaj Osobę" w górnym pasku.</p>
+    <div class="flex items-center space-x-4">
+
+        <div class="relative">
+            <select onchange="window.location.href=this.value" class="p-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                <option value="#" disabled>Wybierz Osobę</option>
+                <option th:each="person : ${people}"
+                        th:value="@{'/'(activePersonId=${person.id}, month=${currentMonth})}"
+                        th:text="${person.name}"
+                        th:selected="${activePerson != null && person.id == activePerson.id}">Anna Kowalska</option>
+            </select>
         </div>
 
-        <div th:if="${activePerson != null}">
-            <div class="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4 border-b pb-4">
-                <h1 class="text-4xl font-extrabold text-gray-900 flex items-center gap-3">
-                    <span class="w-5 h-5 rounded-full" th:classappend="${activePerson.color}"></span>
-                    <span th:text="${activePerson.name}">Marek</span> 
-                </h1>
-                
-                <div class="flex items-center gap-1 bg-white p-2 rounded-xl shadow-md border border-gray-200"> <a th:href="@{'/'(activePersonId=${activePerson.id}, month=${previousMonth})}" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Poprzedni miesiąc">
-                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
-                    </a>
-                    <span class="font-semibold text-lg text-indigo-700 px-4" th:text="${currentMonthName}">Październik 2025</span>
-                     <a th:href="@{'/'(activePersonId=${activePerson.id}, month=${nextMonth})}" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Następny miesiąc">
-                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                     </a>
+        <button onclick="toggleAddPersonForm()" class="p-2.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition shadow-md" title="Dodaj nową osobę">
+            <i data-lucide="user-plus" class="w-5 h-5"></i>
+        </button>
+    </div>
+</div>
+</nav>
+
+<div id="addPersonFormContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
+    <form id="addPersonForm" th:action="@{/add-person}" method="POST" class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm"> <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i> Dodaj Nową Osobę
+        </h3>
+        <button type="button" onclick="toggleAddPersonForm()" class="text-gray-400 hover:text-gray-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Imię</label>
+            <input type="text" name="name" placeholder="Imię osoby..." class="w-full p-3 border border-gray-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" required> </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white p-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg">Zapisz</button>
+    </form>
+</div>
+
+<div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <div th:if="${activePerson == null}" class="text-center p-12 bg-white rounded-3xl shadow-xl mt-12"> <i data-lucide="sparkles" class="w-12 h-12 text-indigo-400 mx-auto mb-4"></i>
+        <h2 class="text-3xl font-bold text-gray-800">Witaj w Asystencie Finansów!</h2>
+        <p class="text-gray-500 mt-3 text-lg">Aby zacząć, dodaj pierwszą osobę za pomocą przycisku "Dodaj Osobę" w górnym pasku.</p>
+    </div>
+
+    <div th:if="${activePerson != null}">
+        <div class="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4 border-b pb-4">
+            <h1 class="text-4xl font-extrabold text-gray-900 flex items-center gap-3">
+                <span class="w-5 h-5 rounded-full" th:classappend="${activePerson.color}"></span>
+                <span th:text="${activePerson.name}">Marek</span>
+            </h1>
+
+            <div class="flex items-center gap-1 bg-white p-2 rounded-xl shadow-md border border-gray-200"> <a th:href="@{'/'(activePersonId=${activePerson.id}, month=${previousMonth})}" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Poprzedni miesiąc">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </a>
+                <span class="font-semibold text-lg text-indigo-700 px-4" th:text="${currentMonthName}">Październik 2025</span>
+                <a th:href="@{'/'(activePersonId=${activePerson.id}, month=${nextMonth})}" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Następny miesiąc">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between"> <div>
+                <p class="text-sm font-medium text-gray-500">Przychody (Zaksięgowane)</p>
+                <p class="text-2xl font-bold text-green-600" th:text="${#numbers.formatDecimal(monthlyIncome, 1, 2)} + ' PLN'"></p>
+            </div>
+                <i data-lucide="trending-up" class="w-8 h-8 text-green-500"></i>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between"> <div>
+                <p class="text-sm font-medium text-gray-500">Wydatki (Zaksięgowane)</p>
+                <p class="text-2xl font-bold text-red-600" th:text="${#numbers.formatDecimal(monthlyExpenses, 1, 2)} + ' PLN'"></p>
+            </div>
+                <i data-lucide="trending-down" class="w-8 h-8 text-red-500"></i>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between" th:classappend="${monthlyBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'border-indigo-400' : 'border-orange-400'}">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Bilans Miesiąca</p>
+                    <p class="text-2xl font-bold"
+                       th:classappend="${monthlyBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'text-indigo-700' : 'text-orange-700'}"
+                       th:text="${#numbers.formatDecimal(monthlyBalance, 1, 2)} + ' PLN'"></p>
+                </div>
+                <i data-lucide="scale" class="w-8 h-8 text-indigo-500"></i>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between" th:classappend="${cumulativeBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'border-blue-400' : 'border-red-400'}">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Bilans Skumulowany (Do Dziś)</p>
+                    <p class="text-2xl font-bold"
+                       th:classappend="${cumulativeBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'text-blue-700' : 'text-red-700'}"
+                       th:text="${#numbers.formatDecimal(cumulativeBalance, 1, 2)} + ' PLN'"></p>
+                </div>
+                <i data-lucide="wallet" class="w-8 h-8 text-blue-500"></i>
+            </div>
+        </div>
+
+        <div th:if="${!unpaidExpenses.isEmpty()}" class="mb-8 p-6 bg-red-50 rounded-2xl shadow-lg border-l-4 border-red-500"> <h2 class="text-2xl font-bold text-red-800 mb-4 flex items-center gap-3">
+            <i data-lucide="alert-triangle" class="w-6 h-6"></i> Do zapłaty w tym miesiącu:
+            <span th:text="${#numbers.formatDecimal(unpaidExpenses.stream().map(t -> t.amount).reduce(T(java.math.BigDecimal).ZERO, T(java.math.BigDecimal)::add), 1, 2)} + ' PLN'"></span>
+        </h2>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+                <div th:each="expense : ${unpaidExpenses}" class="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-red-100">
+                    <div class="text-sm font-medium text-gray-700" th:text="${expense.description}">Opis wydatku</div>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-base font-bold text-red-600" th:text="'Kwota: ' + ${#numbers.formatDecimal(expense.amount, 1, 2)} + ' PLN'"></span>
+                        <span class="text-xs text-red-500" th:text="'Termin: ' + ${#temporals.format(expense.dueDate, 'dd.MM')}"></span>
+                        <a th:href="@{'/toggle-paid'(id=${expense.id}, month=${currentMonth})}"
+                           class="text-xs font-semibold px-2 py-1 rounded-full bg-green-500 text-white hover:bg-green-600 transition">
+                            Oznacz jako Zapłacone
+                        </a>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between"> <div>
-                        <p class="text-sm font-medium text-gray-500">Przychody (Zaksięgowane)</p>
-                        <p class="text-2xl font-bold text-green-600" th:text="${#numbers.formatDecimal(monthlyIncome, 1, 2)} + ' PLN'"></p>
+        <div th:if="${!openTasks.isEmpty()}" class="mb-8 p-6 bg-blue-50 rounded-2xl shadow-lg border-l-4 border-blue-500"> <h2 class="text-2xl font-bold text-blue-800 mb-4 flex items-center gap-3">
+            <i data-lucide="list-checks" class="w-6 h-6"></i> Aktywne Zadania (Niezakończone)
+        </h2>
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+                <div th:each="task : ${openTasks}" class="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-blue-100">
+                    <div class="text-sm font-medium text-gray-700">
+                        <span th:text="${task.description}"></span>
+                        <span class="text-xs text-gray-500 ml-3" th:text="'Termin: ' + ${#temporals.format(task.date, 'dd.MM.yyyy')}"></span>
                     </div>
-                    <i data-lucide="trending-up" class="w-8 h-8 text-green-500"></i>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between"> <div>
-                        <p class="text-sm font-medium text-gray-500">Wydatki (Zaksięgowane)</p>
-                        <p class="text-2xl font-bold text-red-600" th:text="${#numbers.formatDecimal(monthlyExpenses, 1, 2)} + ' PLN'"></p>
+                    <div class="flex items-center space-x-3">
+                        <a th:href="@{'/toggle-completed'(id=${task.id}, month=${currentMonth})}"
+                           class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">
+                            Ukończ Zadanie
+                        </a>
                     </div>
-                    <i data-lucide="trending-down" class="w-8 h-8 text-red-500"></i>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between" th:classappend="${monthlyBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'border-indigo-400' : 'border-orange-400'}">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Bilans Miesiąca</p>
-                        <p class="text-2xl font-bold" 
-                           th:classappend="${monthlyBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'text-indigo-700' : 'text-orange-700'}"
-                           th:text="${#numbers.formatDecimal(monthlyBalance, 1, 2)} + ' PLN'"></p>
-                    </div>
-                    <i data-lucide="scale" class="w-8 h-8 text-indigo-500"></i>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between" th:classappend="${cumulativeBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'border-blue-400' : 'border-red-400'}">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Bilans Skumulowany (Do Dziś)</p>
-                        <p class="text-2xl font-bold" 
-                           th:classappend="${cumulativeBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'text-blue-700' : 'text-red-700'}"
-                           th:text="${#numbers.formatDecimal(cumulativeBalance, 1, 2)} + ' PLN'"></p>
-                    </div>
-                    <i data-lucide="wallet" class="w-8 h-8 text-blue-500"></i>
                 </div>
             </div>
+        </div>
 
-            <div th:if="${!unpaidExpenses.isEmpty()}" class="mb-8 p-6 bg-red-50 rounded-2xl shadow-lg border-l-4 border-red-500"> <h2 class="text-2xl font-bold text-red-800 mb-4 flex items-center gap-3">
-                    <i data-lucide="alert-triangle" class="w-6 h-6"></i> Do zapłaty w tym miesiącu: 
-                    <span th:text="${#numbers.formatDecimal(unpaidExpenses.stream().map(t -> t.amount).reduce(T(java.math.BigDecimal).ZERO, T(java.math.BigDecimal)::add), 1, 2)} + ' PLN'"></span>
-                 </h2>
-                 <div class="space-y-2 max-h-48 overflow-y-auto">
-                    <div th:each="expense : ${unpaidExpenses}" class="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-red-100">
-                        <div class="text-sm font-medium text-gray-700" th:text="${expense.description}">Opis wydatku</div>
-                        <div class="flex items-center space-x-3">
-                            <span class="text-base font-bold text-red-600" th:text="'Kwota: ' + ${#numbers.formatDecimal(expense.amount, 1, 2)} + ' PLN'"></span>
-                            <span class="text-xs text-red-500" th:text="'Termin: ' + ${#dates.format(expense.dueDate, 'dd.MM')}"></span>
-                            <a th:href="@{'/toggle-paid'(id=${expense.id}, month=${currentMonth})}"
-                               class="text-xs font-semibold px-2 py-1 rounded-full bg-green-500 text-white hover:bg-green-600 transition">
-                                Oznacz jako Zapłacone
-                            </a>
-                        </div>
+
+        <div th:if="${activePerson != null}" class="mb-12 p-6 bg-white rounded-2xl shadow-lg border border-gray-200"> <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-3">
+            <i data-lucide="bar-chart-2" class="w-6 h-6 text-indigo-600"></i> Podsumowanie Graficzne
+        </h2>
+            <div class="h-80">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
+
+        <div class="flex gap-4">
+            <div id="calendarContainer" class="lg:w-1/2 transition-all duration-500 mx-auto lg:mx-0">
+                <div class="bg-white rounded-2xl shadow-lg p-4 mb-10 border border-gray-200"> <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-5 h-5"></i> Kalendarz
+                    </h2>
+                    <button onclick="toggleCalendarSize()" id="toggleCalendarButton" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 font-medium transition shadow-sm">
+                        Powiększ
+                    </button>
+                </div>
+
+                    <div class="calendar-header">
+                        <div th:each="dayName : ${weekDays}" th:text="${dayName}">Pon</div>
                     </div>
-                 </div>
-            </div>
 
-            <div th:if="${!openTasks.isEmpty()}" class="mb-8 p-6 bg-blue-50 rounded-2xl shadow-lg border-l-4 border-blue-500"> <h2 class="text-2xl font-bold text-blue-800 mb-4 flex items-center gap-3">
-                    <i data-lucide="list-checks" class="w-6 h-6"></i> Aktywne Zadania (Niezakończone)
-                 </h2>
-                 <div class="space-y-2 max-h-80 overflow-y-auto">
-                    <div th:each="task : ${openTasks}" class="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-blue-100">
-                        <div class="text-sm font-medium text-gray-700">
-                            <span th:text="${task.description}"></span>
-                            <span class="text-xs text-gray-500 ml-3" th:text="'Termin: ' + ${#dates.format(task.date, 'dd.MM.yyyy')}"></span>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <a th:href="@{'/toggle-completed'(id=${task.id}, month=${currentMonth})}"
-                               class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">
-                                Ukończ Zadanie
-                            </a>
-                        </div>
-                    </div>
-                 </div>
-            </div>
+                    <div id="calendarGridWrapper" class="minimized-calendar-view transition-all duration-300 grid grid-cols-7 gap-px">
+                        <div th:each="week : ${calendarGrid}" class="contents">
+                            <div th:each="day : ${week}"
+                                 class="calendar-day border border-gray-100 relative group transition-colors"
+                                 th:classappend="${!day.isCurrentMonth ? 'other-month' : 'bg-white hover:bg-gray-50'} + ${day.isToday ? ' today' : ''}"
+                                 th:data-person-id="${activePerson.id}"
+                                 th:data-date="${day.date}"
+                                 th:data-day="${day.date.dayOfMonth}">
 
+                                <div class="font-bold text-right text-xs w-full flex justify-between items-start"
+                                     th:classappend="${day.isToday ? 'text-indigo-700' : 'text-gray-700'}">
+                                    <div th:text="${day.getDayOfMonth()}">15</div>
 
-            <div th:if="${activePerson != null}" class="mb-12 p-6 bg-white rounded-2xl shadow-lg border border-gray-200"> <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                    <i data-lucide="bar-chart-2" class="w-6 h-6 text-indigo-600"></i> Podsumowanie Graficzne
-                 </h2>
-                 <div class="h-80">
-                     <canvas id="monthlyChart"></canvas>
-                 </div>
-            </div>
-
-
-            <div class="flex gap-4">
-                <div id="calendarContainer" class="lg:w-1/2 transition-all duration-500 mx-auto lg:mx-0">
-                    <div class="bg-white rounded-2xl shadow-lg p-4 mb-10 border border-gray-200"> <div class="flex justify-between items-center mb-3">
-                            <h2 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                                <i data-lucide="calendar" class="w-5 h-5"></i> Kalendarz
-                            </h2>
-                             <button onclick="toggleCalendarSize()" id="toggleCalendarButton" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 font-medium transition shadow-sm">
-                                 Powiększ
-                             </button>
-                        </div>
-
-                        <div class="calendar-header">
-                            <div th:each="dayName : ${weekDays}" th:text="${dayName}">Pon</div>
-                        </div>
-
-                        <div id="calendarGridWrapper" class="minimized-calendar-view transition-all duration-300 grid grid-cols-7 gap-px">
-                            <div th:each="week : ${calendarGrid}" class="contents">
-                                <div th:each="day : ${week}" 
-                                     class="calendar-day border border-gray-100 relative group transition-colors"
-                                     th:classappend="${!day.isCurrentMonth ? 'other-month' : 'bg-white hover:bg-gray-50'} + ${day.isToday ? ' today' : ''}"
-                                     th:data-person-id="${activePerson.id}"
-                                     th:data-date="${day.date}"
-                                     th:data-day="${day.date.dayOfMonth}">
-                                     
-                                    <div class="font-bold text-right text-xs w-full flex justify-between items-start" 
-                                         th:classappend="${day.isToday ? 'text-indigo-700' : 'text-gray-700'}">
-                                        <div th:text="${day.getDayOfMonth()}">15</div>
-                                        
-                                        <div class="event-dots">
-                                            <div th:if="${!day.getUnpaidExpenses().isEmpty()}" class="event-dot bg-red-700" title="Do zapłaty"></div>
-                                            <div th:if="${!day.getTasks().isEmpty()}" class="event-dot bg-blue-700" title="Zadania"></div>
-                                            <div th:if="${!day.getRecurringTasks().isEmpty()}" class="event-dot bg-purple-700" title="Cykliczne zadania"></div>
-                                            <div th:if="${!day.getRecurringPayments().isEmpty()}" class="event-dot bg-gray-700" title="Generowanie płatności"></div>
-                                        </div>
+                                    <div class="event-dots">
+                                        <div th:if="${!day.getUnpaidExpenses().isEmpty()}" class="event-dot bg-red-700" title="Do zapłaty"></div>
+                                        <div th:if="${!day.getTasks().isEmpty()}" class="event-dot bg-blue-700" title="Zadania"></div>
+                                        <div th:if="${!day.getRecurringTasks().isEmpty()}" class="event-dot bg-purple-700" title="Cykliczne zadania"></div>
+                                        <div th:if="${!day.getRecurringPayments().isEmpty()}" class="event-dot bg-gray-700" title="Generowanie płatności"></div>
                                     </div>
-                                    
-                                    <div class="mt-1 space-y-1 text-xs event-list">
-                                        <div th:each="expense : ${day.getUnpaidExpenses()}" class="bg-red-50 text-red-700 p-1 rounded-md border border-red-200 truncate">
-                                            <i data-lucide="alert-triangle" class="w-3 h-3 inline-block"></i> <span class="font-bold">Do zapłaty:</span> <span th:text="${expense.description}"></span>
-                                        </div>
-                                        <div th:each="task : ${day.getTasks()}" class="bg-blue-50 text-blue-700 p-1 rounded-md border border-blue-200 truncate">
-                                            <i data-lucide="list-checks" class="w-3 h-3 inline-block"></i> <span th:classappend="${task.completed} ? 'line-through text-gray-500' : 'font-medium'" th:text="${task.description}"></span>
-                                        </div>
-                                        <div th:each="rtask : ${day.getRecurringTasks()}" class="bg-purple-50 text-purple-700 p-1 rounded-md border border-purple-200 truncate">
-                                            <i data-lucide="repeat" class="w-3 h-3 inline-block"></i> <span class="font-bold">Zaplanowane:</span> <span th:text="${rtask.description}"></span>
-                                        </div>
-                                        <div th:each="payment : ${day.getRecurringPayments()}" class="bg-gray-50 text-gray-500 p-1 rounded-md border border-gray-200 truncate">
-                                            <i data-lucide="circle-dot" class="w-3 h-3 inline-block"></i> <span th:text="${payment.description}"></span>
-                                        </div>
+                                </div>
+
+                                <div class="mt-1 space-y-1 text-xs event-list">
+                                    <div th:each="expense : ${day.getUnpaidExpenses()}" class="bg-red-50 text-red-700 p-1 rounded-md border border-red-200 truncate">
+                                        <i data-lucide="alert-triangle" class="w-3 h-3 inline-block"></i> <span class="font-bold">Do zapłaty:</span> <span th:text="${expense.description}"></span>
+                                    </div>
+                                    <div th:each="task : ${day.getTasks()}" class="bg-blue-50 text-blue-700 p-1 rounded-md border border-blue-200 truncate">
+                                        <i data-lucide="list-checks" class="w-3 h-3 inline-block"></i> <span th:classappend="${task.completed} ? 'line-through text-gray-500' : 'font-medium'" th:text="${task.description}"></span>
+                                    </div>
+                                    <div th:each="rtask : ${day.getRecurringTasks()}" class="bg-purple-50 text-purple-700 p-1 rounded-md border border-purple-200 truncate">
+                                        <i data-lucide="repeat" class="w-3 h-3 inline-block"></i> <span class="font-bold">Zaplanowane:</span> <span th:text="${rtask.description}"></span>
+                                    </div>
+                                    <div th:each="payment : ${day.getRecurringPayments()}" class="bg-gray-50 text-gray-500 p-1 rounded-md border border-gray-200 truncate">
+                                        <i data-lucide="circle-dot" class="w-3 h-3 inline-block"></i> <span th:text="${payment.description}"></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div id="FormsUnderCalendar" class="lg:w-full mt-8 hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div id="FormsUnderCalendar" class="lg:w-full mt-8 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                                    <i data-lucide="dollar-sign" class="w-5 h-5 text-green-600"></i> Dodaj Transakcję
-                                </h3>
-                                <form th:action="@{/add-transaction}" method="POST">
-                                    <input type="hidden" name="personId" th:value="${activePerson.id}">
-                                    <input type="hidden" name="month" th:value="${currentMonth}">
-                                    <div class="mb-4">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                                        <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
-                                    <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Kwota (PLN)</label>
-                                            <input type="number" step="0.01" name="amount" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
-                                            <select name="type" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> <option value="INCOME">Przychód</option>
-                                                <option value="EXPENSE">Wydatek</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Data księgowania</label>
-                                            <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Termin płatności</label>
-                                            <input type="date" name="dueDate" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500"> </div>
-                                    </div>
-                                    <div class="flex items-center mb-4">
-                                        <input type="checkbox" name="paid" id="paid" class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"> <label for="paid" class="ml-2 block text-sm text-gray-700">Zapłacono</label>
-                                    </div>
-                                    <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Transakcję</button> </form>
-                            </div>
-
-                            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                                    <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i> Dodaj Zadanie
-                                </h3>
-                                <form th:action="@{/add-task}" method="POST">
-                                    <input type="hidden" name="assignerId" th:value="${activePerson.id}">
-                                    <input type="hidden" name="month" th:value="${currentMonth}">
-                                    <div class="mb-4">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                                        <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
-                                    <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Wykonawca</label>
-                                            <select name="assigneeId" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500"> <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Termin</label>
-                                            <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
-                                    </div>
-                                    <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg">Zapisz Zadanie</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div> <div id="DynamicRightSidebar" class="forms-right-sidebar lg:w-1/2 transition-all duration-500">
-                    <div class="grid grid-cols-1 gap-6">
                         <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                                <i data-lucide="dollar-sign" class="w-5 h-5 text-green-600"></i> Dodaj Transakcję
-                            </h3>
+                            <i data-lucide="dollar-sign" class="w-5 h-5 text-green-600"></i> Dodaj Transakcję
+                        </h3>
                             <form th:action="@{/add-transaction}" method="POST">
                                 <input type="hidden" name="personId" th:value="${activePerson.id}">
                                 <input type="hidden" name="month" th:value="${currentMonth}">
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                                    <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
-                                </div>
+                                    <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
                                 <div class="grid grid-cols-2 gap-4 mb-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Kwota (PLN)</label>
-                                        <input type="number" step="0.01" name="amount" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
-                                    </div>
+                                        <input type="number" step="0.01" name="amount" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
-                                        <select name="type" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
-                                            <option value="INCOME">Przychód</option>
+                                        <select name="type" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> <option value="INCOME">Przychód</option>
                                             <option value="EXPENSE">Wydatek</option>
                                         </select>
                                     </div>
@@ -402,399 +339,462 @@
                                 <div class="grid grid-cols-2 gap-4 mb-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Data księgowania</label>
-                                        <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
-                                    </div>
+                                        <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Termin płatności</label>
-                                        <input type="date" name="dueDate" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500">
-                                    </div>
+                                        <input type="date" name="dueDate" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500"> </div>
                                 </div>
                                 <div class="flex items-center mb-4">
-                                    <input type="checkbox" name="paid" id="paid" class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
-                                    <label for="paid" class="ml-2 block text-sm text-gray-700">Zapłacono</label>
+                                    <input type="checkbox" name="paid" id="paid" class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"> <label for="paid" class="ml-2 block text-sm text-gray-700">Zapłacono</label>
                                 </div>
-                                <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Transakcję</button>
-                            </form>
+                                <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Transakcję</button> </form>
                         </div>
 
                         <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                                <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i> Dodaj Zadanie
-                            </h3>
+                            <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i> Dodaj Zadanie
+                        </h3>
                             <form th:action="@{/add-task}" method="POST">
                                 <input type="hidden" name="assignerId" th:value="${activePerson.id}">
                                 <input type="hidden" name="month" th:value="${currentMonth}">
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                                    <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
-                                </div>
+                                    <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
                                 <div class="grid grid-cols-2 gap-4 mb-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Wykonawca</label>
-                                        <select name="assigneeId" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500">
-                                            <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
+                                        <select name="assigneeId" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500"> <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Termin</label>
-                                        <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
-                                    </div>
+                                        <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required> </div>
                                 </div>
                                 <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg">Zapisz Zadanie</button>
                             </form>
                         </div>
                     </div>
-                </div> 
-            </div>
-
-            <div th:if="${activePerson != null}" class="mt-12">
-                <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
-                    <i data-lucide="settings" class="w-7 h-7 text-purple-600"></i> Zarządzanie Regułami
-                </h2>
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Stałą Transakcję</h3>
-                        <form th:action="@{/add-recurring-transaction}" method="POST">
-                            <input type="hidden" name="personId" th:value="${activePerson.id}">
-                            <div class="mb-4">
-                                <label class="text-sm font-medium text-gray-600">Opis</label>
-                                <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="text-sm font-medium text-gray-600">Kwota (PLN)</label>
-                                    <input type="number" step="0.01" name="amount" class="w-full p-3 border rounded-lg mt-1" required>
-                                </div>
-                                <div>
-                                    <label class="text-sm font-medium text-gray-600">Typ</label>
-                                    <select name="type" class="w-full p-3 border rounded-lg mt-1">
-                                        <option value="INCOME">Przychód</option>
-                                        <option value="EXPENSE">Wydatek</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-600">Dzień Miesiąca Transakcji (1-31)</label>
-                                <input type="number" min="1" max="31" name="dayOfMonthToGenerate" value="1" class="w-full p-3 border rounded-lg mt-1" required>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-600">Opóźnienie Terminu Płatności (w dniach)</label>
-                                <input type="number" min="0" name="daysUntilDue" value="0" class="w-full p-3 border rounded-lg mt-1" required>
-                                <p class="text-xs text-gray-500 mt-1">0 = termin tego samego dnia</p>
-                            </div>
-                            <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Stałą Transakcję</button> </form>
-                            <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Transakcji</h4>
-                            <div class="max-h-[300px] overflow-y-auto">
-                                <div th:if="${recurringTransactions.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych stałych transakcji.</div>
-                                <div th:each="rt : ${recurringTransactions}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
-                                    <div>
-                                        <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
-                                        <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonthToGenerate} + ' dnia | Termin: +' + ${rt.daysUntilDue} + ' dni'"></div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="font-bold" th:classappend="${rt.type == T(com.example.finansow.model.TransactionType).INCOME} ? 'text-green-600' : 'text-red-600'"
-                                             th:text="${(rt.type == T(com.example.finansow.model.TransactionType).INCOME ? '+' : '-') + #numbers.formatDecimal(rt.amount, 1, 2)} + ' PLN'">
-                                        </div>
-                                        <a th:href="@{'/delete-recurring-transaction'(id=${rt.id}, personId=${activePerson.id})}"
-                                           class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
-                                            <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Cykliczne Zadanie</h3>
-                        <form th:action="@{/add-recurring-task}" method="POST" onchange="toggleTaskOptions()">
-                            <input type="hidden" name="assignerId" th:value="${activePerson.id}">
-                            <div class="mb-4">
-                                <label class="text-sm font-medium text-gray-600">Opis zadania</label>
-                                <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="text-sm font-medium text-gray-600">Dla kogo (Wykonawca)</label>
-                                    <select name="assigneeId" class="w-full p-3 border rounded-lg mt-1">
-                                        <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-sm font-medium text-gray-600">Powtarzaj</label>
-                                    <select name="recurrenceType" id="recurrenceType" class="w-full p-3 border rounded-lg mt-1">
-                                        <option th:value="${T(com.example.finansow.model.RecurrenceType).DAILY}">Codziennie</option>
-                                        <option th:value="${T(com.example.finansow.model.RecurrenceType).WEEKLY}">Co tydzień</option>
-                                        <option th:value="${T(com.example.finansow.model.RecurrenceType).MONTHLY}">Co miesiąc</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="monthlyOptions" class="mb-4 hidden-options">
-                                <label class="text-sm font-medium text-gray-600">Dzień Miesiąca (1-31)</label>
-                                <input type="number" min="1" max="31" name="dayOfMonth" value="1" class="w-full p-3 border rounded-lg mt-1">
-                            </div>
-                            <div id="weeklyOptions" class="mb-4 hidden-options">
-                                <label class="text-sm font-medium text-gray-600">W które dni:</label>
-                                <div class="grid grid-cols-4 gap-2 mt-2 text-sm">
-                                    <div><input type="checkbox" name="onMonday" value="true" id="mon"> <label for="mon">Pon</label></div>
-                                    <div><input type="checkbox" name="onTuesday" value="true" id="tue"> <label for="tue">Wt</label></div>
-                                    <div><input type="checkbox" name="onWednesday" value="true" id="wed"> <label for="wed">Śr</label></div>
-                                    <div><input type="checkbox" name="onThursday" value="true" id="thu"> <label for="thu">Czw</label></div>
-                                    <div><input type="checkbox" name="onFriday" value="true" id="fri"> <label for="fri">Pt</label></div>
-                                    <div><input type="checkbox" name="onSaturday" value="true" id="sat"> <label for="sat">Sob</label></div>
-                                    <div><input type="checkbox" name="onSunday" value="true" id="sun"> <label for="sun">Niedz</label></div>
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full bg-purple-600 text-white p-3 rounded-xl font-semibold hover:bg-purple-700 transition shadow-lg mt-4">Zapisz Cykliczne Zadanie</button>
-                        </form>
-                        <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Zadań</h4>
-                            <div class="max-h-[300px] overflow-y-auto">
-                                <div th:if="${recurringTasks.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych cyklicznych zadań.</div>
-                                <div th:each="rt : ${recurringTasks}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
-                                    <div>
-                                        <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
-                                        <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonth} + ' dnia | Powtarza: ' + ${rt.recurrenceType.toString()}"></div>
-                                    </div>
-                                    <a th:href="@{'/delete-recurring-task'(id=${rt.id}, personId=${activePerson.id})}"
-                                       class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
-                                        <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
-                                    </a>
-                                </div>
-                            </div>
-                    </div>
                 </div>
-                
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-2 mt-10 flex items-center gap-3">
-                    <i data-lucide="file-text" class="w-6 h-6 text-yellow-600"></i> Dane i Raporty
-                </h2>
-                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 mb-8 flex items-center gap-4"> <a th:href="@{'/report-monthly'(personId=${activePerson.id}, month=${currentMonth})}"
-                       class="p-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-md flex items-center gap-2">
-                       Pobierz Raport Miesięczny
-                    </a>
-                    <a th:href="@{'/report-yearly'(personId=${activePerson.id}, year=${T(java.time.YearMonth).parse(currentMonth).getYear()})}"
-                       class="p-3 bg-gray-600 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition shadow-md flex items-center gap-2">
-                        Pobierz Raport Roczny
-                    </a>
-                    <form th:action="@{/archive-data}" method="post" onsubmit="return confirm('Czy na pewno chcesz usunąć wszystkie zakończone zadania i transakcje starsze niż 6 miesięcy? Tej operacji nie można cofnąć.');">
+            </div> <div id="DynamicRightSidebar" class="forms-right-sidebar lg:w-1/2 transition-all duration-500">
+            <div class="grid grid-cols-1 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                    <i data-lucide="dollar-sign" class="w-5 h-5 text-green-600"></i> Dodaj Transakcję
+                </h3>
+                    <form th:action="@{/add-transaction}" method="POST">
                         <input type="hidden" name="personId" th:value="${activePerson.id}">
-                        <button type="submit" class="p-3 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition shadow-md flex items-center gap-2">
-                            <i data-lucide="archive" class="w-5 h-5"></i> Archiwizuj Stare Dane
-                        </button>
+                        <input type="hidden" name="month" th:value="${currentMonth}">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                            <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Kwota (PLN)</label>
+                                <input type="number" step="0.01" name="amount" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+                                <select name="type" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
+                                    <option value="INCOME">Przychód</option>
+                                    <option value="EXPENSE">Wydatek</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Data księgowania</label>
+                                <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Termin płatności</label>
+                                <input type="date" name="dueDate" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500">
+                            </div>
+                        </div>
+                        <div class="flex items-center mb-4">
+                            <input type="checkbox" name="paid" id="paid" class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
+                            <label for="paid" class="ml-2 block text-sm text-gray-700">Zapłacono</label>
+                        </div>
+                        <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Transakcję</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                    <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i> Dodaj Zadanie
+                </h3>
+                    <form th:action="@{/add-task}" method="POST">
+                        <input type="hidden" name="assignerId" th:value="${activePerson.id}">
+                        <input type="hidden" name="month" th:value="${currentMonth}">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                            <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Wykonawca</label>
+                                <select name="assigneeId" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500">
+                                    <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Termin</label>
+                                <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg">Zapisz Zadanie</button>
                     </form>
                 </div>
             </div>
-
-
-        </div> </div> <div id="dayDetailsModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
-        <div id="dayDetailsModal" class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                     <i data-lucide="info" class="w-5 h-5 text-teal-600"></i> Szczegóły Dnia <span id="modalDateDisplay" class="text-teal-600 ml-2"></span> </h3>
-                <button type="button" onclick="hideDayDetails()" class="text-gray-400 hover:text-gray-600">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div id="modalEventList" class="space-y-3 max-h-96 overflow-y-auto">
-                </div>
-            <div id="modalLoading" class="text-center py-4 hidden">Ładowanie...</div>
         </div>
+        </div>
+
+        <div th:if="${activePerson != null}" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
+                <i data-lucide="settings" class="w-7 h-7 text-purple-600"></i> Zarządzanie Regułami
+            </h2>
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Stałą Transakcję</h3>
+                    <form th:action="@{/add-recurring-transaction}" method="POST">
+                        <input type="hidden" name="personId" th:value="${activePerson.id}">
+                        <div class="mb-4">
+                            <label class="text-sm font-medium text-gray-600">Opis</label>
+                            <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Kwota (PLN)</label>
+                                <input type="number" step="0.01" name="amount" class="w-full p-3 border rounded-lg mt-1" required>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Typ</label>
+                                <select name="type" class="w-full p-3 border rounded-lg mt-1">
+                                    <option value="INCOME">Przychód</option>
+                                    <option value="EXPENSE">Wydatek</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-600">Dzień Miesiąca Transakcji (1-31)</label>
+                            <input type="number" min="1" max="31" name="dayOfMonthToGenerate" value="1" class="w-full p-3 border rounded-lg mt-1" required>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-600">Opóźnienie Terminu Płatności (w dniach)</label>
+                            <input type="number" min="0" name="daysUntilDue" value="0" class="w-full p-3 border rounded-lg mt-1" required>
+                            <p class="text-xs text-gray-500 mt-1">0 = termin tego samego dnia</p>
+                        </div>
+                        <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Stałą Transakcję</button> </form>
+                    <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Transakcji</h4>
+                    <div class="max-h-[300px] overflow-y-auto">
+                        <div th:if="${recurringTransactions.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych stałych transakcji.</div>
+                        <div th:each="rt : ${recurringTransactions}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
+                            <div>
+                                <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
+                                <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonthToGenerate} + ' dnia | Termin: +' + ${rt.daysUntilDue} + ' dni'"></div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="font-bold" th:classappend="${rt.type == T(com.example.finansow.model.TransactionType).INCOME} ? 'text-green-600' : 'text-red-600'"
+                                     th:text="${(rt.type == T(com.example.finansow.model.TransactionType).INCOME ? '+' : '-') + #numbers.formatDecimal(rt.amount, 1, 2)} + ' PLN'">
+                                </div>
+                                <a th:href="@{'/delete-recurring-transaction'(id=${rt.id}, personId=${activePerson.id})}"
+                                   class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
+                                    <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Cykliczne Zadanie</h3>
+                    <form th:action="@{/add-recurring-task}" method="POST" onchange="toggleTaskOptions()">
+                        <input type="hidden" name="assignerId" th:value="${activePerson.id}">
+                        <div class="mb-4">
+                            <label class="text-sm font-medium text-gray-600">Opis zadania</label>
+                            <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Dla kogo (Wykonawca)</label>
+                                <select name="assigneeId" class="w-full p-3 border rounded-lg mt-1">
+                                    <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Powtarzaj</label>
+                                <select name="recurrenceType" id="recurrenceType" class="w-full p-3 border rounded-lg mt-1">
+                                    <option th:value="${T(com.example.finansow.model.RecurrenceType).DAILY}">Codziennie</option>
+                                    <option th:value="${T(com.example.finansow.model.RecurrenceType).WEEKLY}">Co tydzień</option>
+                                    <option th:value="${T(com.example.finansow.model.RecurrenceType).MONTHLY}">Co miesiąc</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="monthlyOptions" class="mb-4 hidden-options">
+                            <label class="text-sm font-medium text-gray-600">Dzień Miesiąca (1-31)</label>
+                            <input type="number" min="1" max="31" name="dayOfMonth" value="1" class="w-full p-3 border rounded-lg mt-1">
+                        </div>
+                        <div id="weeklyOptions" class="mb-4 hidden-options">
+                            <label class="text-sm font-medium text-gray-600">W które dni:</label>
+                            <div class="grid grid-cols-4 gap-2 mt-2 text-sm">
+                                <div><input type="checkbox" name="onMonday" value="true" id="mon"> <label for="mon">Pon</label></div>
+                                <div><input type="checkbox" name="onTuesday" value="true" id="tue"> <label for="tue">Wt</label></div>
+                                <div><input type="checkbox" name="onWednesday" value="true" id="wed"> <label for="wed">Śr</label></div>
+                                <div><input type="checkbox" name="onThursday" value="true" id="thu"> <label for="thu">Czw</label></div>
+                                <div><input type="checkbox" name="onFriday" value="true" id="fri"> <label for="fri">Pt</label></div>
+                                <div><input type="checkbox" name="onSaturday" value="true" id="sat"> <label for="sat">Sob</label></div>
+                                <div><input type="checkbox" name="onSunday" value="true" id="sun"> <label for="sun">Niedz</label></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-purple-600 text-white p-3 rounded-xl font-semibold hover:bg-purple-700 transition shadow-lg mt-4">Zapisz Cykliczne Zadanie</button>
+                    </form>
+                    <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Zadań</h4>
+                    <div class="max-h-[300px] overflow-y-auto">
+                        <div th:if="${recurringTasks.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych cyklicznych zadań.</div>
+                        <div th:each="rt : ${recurringTasks}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
+                            <div>
+                                <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
+                                <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonth} + ' dnia | Powtarza: ' + ${rt.recurrenceType.toString()}"></div>
+                            </div>
+                            <a th:href="@{'/delete-recurring-task'(id=${rt.id}, personId=${activePerson.id})}"
+                               class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
+                                <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-2 mt-10 flex items-center gap-3">
+                <i data-lucide="file-text" class="w-6 h-6 text-yellow-600"></i> Dane i Raporty
+            </h2>
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 mb-8 flex items-center gap-4"> <a th:href="@{'/report-monthly'(personId=${activePerson.id}, month=${currentMonth})}"
+                                                                                                                    class="p-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-md flex items-center gap-2">
+                Pobierz Raport Miesięczny
+            </a>
+                <a th:href="@{'/report-yearly'(personId=${activePerson.id}, year=${T(java.time.YearMonth).parse(currentMonth).getYear()})}"
+                   class="p-3 bg-gray-600 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition shadow-md flex items-center gap-2">
+                    Pobierz Raport Roczny
+                </a>
+                <form th:action="@{/archive-data}" method="post" onsubmit="return confirm('Czy na pewno chcesz usunąć wszystkie zakończone zadania i transakcje starsze niż 6 miesięcy? Tej operacji nie można cofnąć.');">
+                    <input type="hidden" name="personId" th:value="${activePerson.id}">
+                    <button type="submit" class="p-3 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition shadow-md flex items-center gap-2">
+                        <i data-lucide="archive" class="w-5 h-5"></i> Archiwizuj Stare Dane
+                    </button>
+                </form>
+            </div>
+        </div>
+
+
+    </div> </div> <div id="dayDetailsModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
+    <div id="dayDetailsModal" class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5 text-teal-600"></i> Szczegóły Dnia <span id="modalDateDisplay" class="text-teal-600 ml-2"></span> </h3>
+            <button type="button" onclick="hideDayDetails()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div id="modalEventList" class="space-y-3 max-h-96 overflow-y-auto">
+        </div>
+        <div id="modalLoading" class="text-center py-4 hidden">Ładowanie...</div>
     </div>
+</div>
 
-    <script th:inline="javascript">
-        // Aktywacja ikon Lucide
-        lucide.createIcons();
+<script th:inline="javascript">
+    // Aktywacja ikon Lucide
+    lucide.createIcons();
 
-        // Pobieranie danych dla Chart.js z Thymeleafa
-        const monthlyIncomeValue = parseFloat(/*[[${monthlyIncome}]]*/ '0.0').toFixed(2);
-        const monthlyExpensesValue = parseFloat(/*[[${monthlyExpenses}]]*/ '0.0').toFixed(2);
-        const currentMonthName = /*[[${currentMonthName}]]*/ 'Bieżący Miesiąc';
+    // Pobieranie danych dla Chart.js z Thymeleafa
+    const monthlyIncomeValue = parseFloat(/*[[${monthlyIncome}]]*/ '0.0').toFixed(2);
+    const monthlyExpensesValue = parseFloat(/*[[${monthlyExpenses}]]*/ '0.0').toFixed(2);
+    const currentMonthName = /*[[${currentMonthName}]]*/ 'Bieżący Miesiąc';
 
 
-        // --- LOGIKA WYKRESU CHART.JS (DODANE) ---
-        const ctx = document.getElementById('monthlyChart');
+    // --- LOGIKA WYKRESU CHART.JS (DODANE) ---
+    const ctx = document.getElementById('monthlyChart');
 
-        if (ctx) {
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Przychody', 'Wydatki'],
-                    datasets: [{
-                        label: 'Kwota (PLN)',
-                        data: [monthlyIncomeValue, monthlyExpensesValue],
-                        backgroundColor: [
-                            'rgba(16, 185, 129, 0.8)', // Green-600
-                            'rgba(239, 68, 68, 0.8)'   // Red-600
-                        ],
-                        borderColor: [
-                            'rgba(16, 185, 129, 1)',
-                            'rgba(239, 68, 68, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        title: {
-                            display: true,
-                            text: 'Przepływy w: ' + currentMonthName
-                        }
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Przychody', 'Wydatki'],
+                datasets: [{
+                    label: 'Kwota (PLN)',
+                    data: [monthlyIncomeValue, monthlyExpensesValue],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)', // Green-600
+                        'rgba(239, 68, 68, 0.8)'   // Red-600
+                    ],
+                    borderColor: [
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
+                    title: {
+                        display: true,
+                        text: 'Przepływy w: ' + currentMonthName
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
                 }
-            });
-        }
-        // --- KONIEC LOGIKI WYKRESU ---
-
-
-        function toggleAddPersonForm() {
-            var container = document.getElementById('addPersonFormContainer');
-            container.classList.toggle('hidden');
-            if (!container.classList.contains('hidden')) {
-                container.style.display = 'flex'; // Zapewnia widoczność modala
-            } else {
-                 container.style.display = 'none'; // Użycie 'none' jest bardziej uniwersalne dla hidden
-            }
-        }
-        
-        function toggleTaskOptions() {
-            const type = document.getElementById('recurrenceType')?.value;
-            const monthly = document.getElementById('monthlyOptions');
-            const weekly = document.getElementById('weeklyOptions');
-            if (monthly) monthly.style.display = type === 'MONTHLY' ? 'block' : 'none';
-            if (weekly) weekly.style.display = type === 'WEEKLY' ? 'block' : 'none';
-        }
-        
-        function toggleCalendarSize() {
-            var wrapper = document.getElementById('calendarGridWrapper');
-            var container = document.getElementById('calendarContainer');
-            var sidebar = document.getElementById('DynamicRightSidebar');
-            var underForms = document.getElementById('FormsUnderCalendar'); 
-            var button = document.getElementById('toggleCalendarButton');
-            
-            // Zmiana stanu
-            const isMinimized = wrapper.classList.contains('minimized-calendar-view');
-
-            // --- Logika przełączania ---
-            
-            // 1. Zmień tryb kalendarza (szczegóły)
-            wrapper.classList.toggle('minimized-calendar-view', !isMinimized);
-            wrapper.classList.toggle('full-calendar-view', isMinimized);
-            
-            // 2. Zmień szerokość kalendarza (lewa kolumna)
-            container.classList.toggle('lg:w-1/2', !isMinimized);
-            container.classList.toggle('lg:w-full', isMinimized);
-            
-            // 3. Zarządzaj widocznością formularzy:
-            
-            // --- Boczny Sidebar (Widoczny tylko gdy kalendarz jest mały) ---
-            sidebar.classList.toggle('hidden', isMinimized); 
-            sidebar.classList.toggle('lg:w-1/2', !isMinimized);
-            
-            // --- Formularze pod kalendarzem (Widoczne tylko gdy kalendarz jest duży) ---
-            if (underForms) {
-                 underForms.classList.toggle('hidden', !isMinimized);
-            }
-            
-            // 4. Zmiana tekstu przycisku
-            if (isMinimized) {
-                button.textContent = 'Pomniejsz';
-            } else {
-                button.textContent = 'Powiększ';
-            }
-            
-            lucide.createIcons();
-        }
-
-        // --- LOGIKA MODALA SZCZEGÓŁÓW DNIA ---
-        document.getElementById('calendarGridWrapper').addEventListener('click', function(e) {
-            const day = e.target.closest('.calendar-day');
-            // Sprawdź, czy kliknięto w komórkę kalendarza z aktywnym miesiącem i z danymi
-            if (!day || day.classList.contains('other-month')) return;
-
-            const personId = day.dataset.personId;
-            const dateString = day.dataset.date;
-            const dayOfMonth = day.dataset.day;
-
-            if (personId && dateString && dayOfMonth) {
-                showDayDetails(personId, dateString, dayOfMonth);
             }
         });
+    }
+    // --- KONIEC LOGIKI WYKRESU ---
 
-        async function showDayDetails(personId, dateString, dayOfMonth) {
-            const modalContainer = document.getElementById('dayDetailsModalContainer');
-            const eventList = document.getElementById('modalEventList');
-            const dateDisplay = document.getElementById('modalDateDisplay');
-            const loading = document.getElementById('modalLoading');
-            
-            // Pokaż modal i włącz ładowanie
-            modalContainer.classList.remove('hidden');
-            modalContainer.style.display = 'flex';
-            eventList.innerHTML = '';
-            loading.classList.remove('hidden');
-            
-            // Ustaw datę w nagłówku
-            dateDisplay.textContent = `${dayOfMonth}. ${new Date(dateString).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}`;
 
-            try {
-                const response = await fetch(`/day-events?personId=${personId}&date=${dateString}`);
-                const events = await response.json();
-                
-                loading.classList.add('hidden');
-                
-                if (events.length === 0) {
-                    eventList.innerHTML = '<p class="text-center text-gray-500 py-4">Brak wydarzeń zaplanowanych na ten dzień.</p>';
-                    return;
-                }
+    function toggleAddPersonForm() {
+        var container = document.getElementById('addPersonFormContainer');
+        container.classList.toggle('hidden');
+        if (!container.classList.contains('hidden')) {
+            container.style.display = 'flex'; // Zapewnia widoczność modala
+        } else {
+            container.style.display = 'none'; // Użycie 'none' jest bardziej uniwersalne dla hidden
+        }
+    }
 
-                events.forEach(event => {
-                    const iconMap = {
-                        'WYDATEK': 'alert-triangle',
-                        'ZADANIE': 'list-checks',
-                        'STAŁA PŁATNOŚĆ': 'repeat',
-                        'WPŁYW': 'trending-up',
-                        'STAŁE ZADANIE': 'repeat'
-                    };
-                    const icon = iconMap[event.type] || 'info';
-                    
-                    let actionHtml = '';
-                    let actionText = '';
-                    let actionClass = '';
+    function toggleTaskOptions() {
+        const type = document.getElementById('recurrenceType')?.value;
+        const monthly = document.getElementById('monthlyOptions');
+        const weekly = document.getElementById('weeklyOptions');
+        if (monthly) monthly.style.display = type === 'MONTHLY' ? 'block' : 'none';
+        if (weekly) weekly.style.display = type === 'WEEKLY' ? 'block' : 'none';
+    }
 
-                    // Jeśli mamy URL akcji (dla transakcji i zadań)
-                    if (event.actionUrl) {
-                        // Sprawdzamy stan na podstawie tekstu w details, co jest bezpieczne w tym przypadku
-                        const isCompleted = event.details.includes("Ukończone") || event.details.includes("Opłacono/Odebrano");
-                        
-                        if (event.type === 'WYDATEK') {
-                            actionText = 'Oznacz jako opłacone';
-                            actionClass = 'bg-green-100 text-green-700 hover:bg-green-200';
-                            if (isCompleted) {
-                                actionText = 'Anuluj Opłatę';
-                                actionClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-                            }
-                        } else if (event.type === 'ZADANIE') {
-                            actionText = 'Ukończ';
-                            actionClass = 'bg-blue-100 text-blue-700 hover:bg-blue-200';
-                            if (isCompleted) {
-                                actionText = 'Anuluj ukończenie';
-                                actionClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-                            }
+    function toggleCalendarSize() {
+        var wrapper = document.getElementById('calendarGridWrapper');
+        var container = document.getElementById('calendarContainer');
+        var sidebar = document.getElementById('DynamicRightSidebar');
+        var underForms = document.getElementById('FormsUnderCalendar');
+        var button = document.getElementById('toggleCalendarButton');
+
+        // Zmiana stanu
+        const isMinimized = wrapper.classList.contains('minimized-calendar-view');
+
+        // --- Logika przełączania ---
+
+        // 1. Zmień tryb kalendarza (szczegóły)
+        wrapper.classList.toggle('minimized-calendar-view', !isMinimized);
+        wrapper.classList.toggle('full-calendar-view', isMinimized);
+
+        // 2. Zmień szerokość kalendarza (lewa kolumna)
+        container.classList.toggle('lg:w-1/2', !isMinimized);
+        container.classList.toggle('lg:w-full', isMinimized);
+
+        // 3. Zarządzaj widocznością formularzy:
+
+        // --- Boczny Sidebar (Widoczny tylko gdy kalendarz jest mały) ---
+        sidebar.classList.toggle('hidden', isMinimized);
+        sidebar.classList.toggle('lg:w-1/2', !isMinimized);
+
+        // --- Formularze pod kalendarzem (Widoczne tylko gdy kalendarz jest duży) ---
+        if (underForms) {
+            underForms.classList.toggle('hidden', !isMinimized);
+        }
+
+        // 4. Zmiana tekstu przycisku
+        if (isMinimized) {
+            button.textContent = 'Pomniejsz';
+        } else {
+            button.textContent = 'Powiększ';
+        }
+
+        lucide.createIcons();
+    }
+
+    // --- LOGIKA MODALA SZCZEGÓŁÓW DNIA ---
+    document.getElementById('calendarGridWrapper').addEventListener('click', function(e) {
+        const day = e.target.closest('.calendar-day');
+        // Sprawdź, czy kliknięto w komórkę kalendarza z aktywnym miesiącem i z danymi
+        if (!day || day.classList.contains('other-month')) return;
+
+        const personId = day.dataset.personId;
+        const dateString = day.dataset.date;
+        const dayOfMonth = day.dataset.day;
+
+        if (personId && dateString && dayOfMonth) {
+            showDayDetails(personId, dateString, dayOfMonth);
+        }
+    });
+
+    async function showDayDetails(personId, dateString, dayOfMonth) {
+        const modalContainer = document.getElementById('dayDetailsModalContainer');
+        const eventList = document.getElementById('modalEventList');
+        const dateDisplay = document.getElementById('modalDateDisplay');
+        const loading = document.getElementById('modalLoading');
+
+        // Pokaż modal i włącz ładowanie
+        modalContainer.classList.remove('hidden');
+        modalContainer.style.display = 'flex';
+        eventList.innerHTML = '';
+        loading.classList.remove('hidden');
+
+        // Ustaw datę w nagłówku
+        dateDisplay.textContent = `${dayOfMonth}. ${new Date(dateString).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}`;
+
+        try {
+            const response = await fetch(`/day-events?personId=${personId}&date=${dateString}`);
+            const events = await response.json();
+
+            loading.classList.add('hidden');
+
+            if (events.length === 0) {
+                eventList.innerHTML = '<p class="text-center text-gray-500 py-4">Brak wydarzeń zaplanowanych na ten dzień.</p>';
+                return;
+            }
+
+            events.forEach(event => {
+                const iconMap = {
+                    'WYDATEK': 'alert-triangle',
+                    'ZADANIE': 'list-checks',
+                    'STAŁA PŁATNOŚĆ': 'repeat',
+                    'WPŁYW': 'trending-up',
+                    'STAŁE ZADANIE': 'repeat'
+                };
+                const icon = iconMap[event.type] || 'info';
+
+                let actionHtml = '';
+                let actionText = '';
+                let actionClass = '';
+
+                // Jeśli mamy URL akcji (dla transakcji i zadań)
+                if (event.actionUrl) {
+                    // Sprawdzamy stan na podstawie tekstu w details, co jest bezpieczne w tym przypadku
+                    const isCompleted = event.details.includes("Ukończone") || event.details.includes("Opłacono/Odebrano");
+
+                    if (event.type === 'WYDATEK') {
+                        actionText = 'Oznacz jako opłacone';
+                        actionClass = 'bg-green-100 text-green-700 hover:bg-green-200';
+                        if (isCompleted) {
+                            actionText = 'Anuluj Opłatę';
+                            actionClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
                         }
-                        
-                        actionHtml = `
+                    } else if (event.type === 'ZADANIE') {
+                        actionText = 'Ukończ';
+                        actionClass = 'bg-blue-100 text-blue-700 hover:bg-blue-200';
+                        if (isCompleted) {
+                            actionText = 'Anuluj ukończenie';
+                            actionClass = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+                        }
+                    }
+
+                    actionHtml = `
                             <a href="${event.actionUrl}" class="ml-auto text-xs font-medium px-2 py-1 rounded-full transition ${actionClass}">
                                 ${actionText}
                             </a>
                         `;
-                    }
-                    
-                    const eventHtml = `
+                }
+
+                const eventHtml = `
                         <div class="p-3 border border-gray-100 rounded-xl flex justify-between items-center bg-white shadow-sm">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="${icon}" class="w-4 h-4 ${event.colorClass}"></i>
@@ -809,55 +809,55 @@
                             </div>
                         </div>
                     `;
-                    eventList.insertAdjacentHTML('beforeend', eventHtml);
-                });
-                // Po wstawieniu wszystkich elementów, aktywuj ikony Lucide
-                lucide.createIcons();
+                eventList.insertAdjacentHTML('beforeend', eventHtml);
+            });
+            // Po wstawieniu wszystkich elementów, aktywuj ikony Lucide
+            lucide.createIcons();
 
-            } catch (error) {
-                console.error('Błąd pobierania danych:', error);
-                loading.classList.add('hidden');
-                eventList.innerHTML = '<p class="text-center text-red-500 py-4">Wystąpił błąd podczas ładowania wydarzeń.</p>';
-            }
+        } catch (error) {
+            console.error('Błąd pobierania danych:', error);
+            loading.classList.add('hidden');
+            eventList.innerHTML = '<p class="text-center text-red-500 py-4">Wystąpił błąd podczas ładowania wydarzeń.</p>';
+        }
+    }
+
+    function hideDayDetails() {
+        const modalContainer = document.getElementById('dayDetailsModalContainer');
+        modalContainer.style.display = 'none';
+    }
+
+    // Uruchom przy ładowaniu strony, aby ustawić poprawny stan
+    document.addEventListener('DOMContentLoaded', () => {
+
+        if (document.getElementById('recurrenceType')) {
+            toggleTaskOptions();
         }
 
-        function hideDayDetails() {
-            const modalContainer = document.getElementById('dayDetailsModalContainer');
-            modalContainer.style.display = 'none';
+        // Inicjalizacja: Ustawienie kalendarza w trybie pomniejszonym przy starcie
+        const wrapper = document.getElementById('calendarGridWrapper');
+        const container = document.getElementById('calendarContainer');
+        const sidebar = document.getElementById('DynamicRightSidebar');
+        const button = document.getElementById('toggleCalendarButton');
+
+        // Upewniamy się, że stan startowy jest mały kalendarz / widoczna prawa kolumna
+        wrapper.classList.add('minimized-calendar-view');
+        container.classList.add('lg:w-1/2', 'mx-auto', 'lg:mx-0'); // 50%
+        sidebar.classList.add('lg:w-1/2'); // 50%
+        sidebar.classList.remove('hidden'); // Pokaż sidebar (w trybie małym)
+
+        if (button) {
+            button.textContent = 'Powiększ';
         }
 
-        // Uruchom przy ładowaniu strony, aby ustawić poprawny stan
-        document.addEventListener('DOMContentLoaded', () => {
-             
-             if (document.getElementById('recurrenceType')) {
-                 toggleTaskOptions();
-             }
-             
-             // Inicjalizacja: Ustawienie kalendarza w trybie pomniejszonym przy starcie
-             const wrapper = document.getElementById('calendarGridWrapper');
-             const container = document.getElementById('calendarContainer');
-             const sidebar = document.getElementById('DynamicRightSidebar');
-             const button = document.getElementById('toggleCalendarButton');
+        // UKRYJ NOWE FORMULARZE POD KALENDARZEM PRZY STARCIE
+        const underForms = document.getElementById('FormsUnderCalendar');
+        if (underForms) {
+            underForms.classList.add('hidden');
+        }
 
-             // Upewniamy się, że stan startowy jest mały kalendarz / widoczna prawa kolumna
-             wrapper.classList.add('minimized-calendar-view');
-             container.classList.add('lg:w-1/2', 'mx-auto', 'lg:mx-0'); // 50%
-             sidebar.classList.add('lg:w-1/2'); // 50%
-             sidebar.classList.remove('hidden'); // Pokaż sidebar (w trybie małym)
-
-             if (button) {
-                button.textContent = 'Powiększ';
-             }
-             
-             // UKRYJ NOWE FORMULARZE POD KALENDARZEM PRZY STARCIE
-             const underForms = document.getElementById('FormsUnderCalendar');
-             if (underForms) {
-                 underForms.classList.add('hidden');
-             }
-
-             document.getElementById('addPersonFormContainer').style.display = 'none';
-             lucide.createIcons();
-        });
-    </script>
+        document.getElementById('addPersonFormContainer').style.display = 'none';
+        lucide.createIcons();
+    });
+</script>
 </body>
 </html>
