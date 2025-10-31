@@ -26,6 +26,10 @@ public class Task {
     // Pole dla reguł cyklicznych (musi być użyte w generatorze)
     private Long recurringOriginId;
 
+    // <<< NOWE POLE: PRIORYTET >>>
+    // Domyślna wartość to 3 (Normalny)
+    private int priority = 3;
+
 
     // --- Konstruktory (pozostają) ---
     public Task() {
@@ -55,9 +59,13 @@ public class Task {
     public boolean isCompleted() { return completed; }
     public void setCompleted(boolean completed) { this.completed = completed; }
     public Long getRecurringOriginId() { return recurringOriginId; }
-    
+
     // POPRAWKA: Setter dla OriginId, wymagany przez generator
-    public void setRecurringOriginId(Long recurringOriginId) { 
+    public void setRecurringOriginId(Long recurringOriginId) {
         this.recurringOriginId = recurringOriginId;
     }
+
+    // <<< NOWE GETTER/SETTER DLA PRIORYTETU >>>
+    public int getPriority() { return priority; }
+    public void setPriority(int priority) { this.priority = priority; }
 }

@@ -26,6 +26,10 @@ public class RecurringTask {
     @Enumerated(EnumType.STRING)
     private RecurrenceType recurrenceType; // DAILY, WEEKLY, MONTHLY
 
+    // <<< NOWE POLE: PRIORYTET >>>
+    // Domyślna wartość to 3 (Normalny)
+    private int priority = 3;
+
     // Używane dla MONTHLY (np. 15 dnia miesiąca)
     private int dayOfMonth;
 
@@ -148,5 +152,8 @@ public class RecurringTask {
     public void setOnSunday(boolean onSunday) {
         this.onSunday = onSunday;
     }
-}
 
+    // <<< NOWE GETTER/SETTER DLA PRIORYTETU >>>
+    public int getPriority() { return priority; }
+    public void setPriority(int priority) { this.priority = priority; }
+}

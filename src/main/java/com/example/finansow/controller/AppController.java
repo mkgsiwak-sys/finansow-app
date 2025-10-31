@@ -6,7 +6,7 @@ import com.example.finansow.service.RecurringService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // <<< DODAJ TEN IMPORT
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -85,6 +85,7 @@ public class AppController {
         if (activePerson != null) {
             LocalDate startDate = currentMonth.atDay(1);
             LocalDate endDate = currentMonth.atEndOfMonth();
+            LocalDate today = LocalDate.now(); // <<< Data na dziś
 
             // *** 1. WYWOŁANIE GENERATORA CYKLICZNEGO PRZEZ SERWIS ***
             recurringService.generateRecurringItems(activePerson.getId(), currentMonth);
@@ -112,8 +113,18 @@ public class AppController {
             // E. Cykliczne zadania (zawsze wszystkie)
             List<RecurringTask> recurringTasks = recurringTaskRepo.findByAssigneeId(activePerson.getId());
 
-            // F. DODANE: Pobranie wszystkich aktywnych/niezakończonych zadań
-            List<Task> openTasks = taskRepository.findByAssigneeIdAndCompleted(activePerson.getId(), false);
+            // F. <<< ZMIANA: Pobranie zadań na dziś ORAZ zaległych >>>
+            // Łączymy dwie listy: zadania na dziś + zadania zaległe (po terminie)
+            List<Task> tasksForToday = taskRepository.findByAssigneeIdAndCompletedAndDate(activePerson.getId(), false, today);
+            List<Task> overdueTasks = taskRepository.findByAssigneeIdAndCompletedAndDateBefore(activePerson.getId(), false, today);
+
+            List<Task> openTasks = Stream.concat(overdueTasks.stream(), tasksForToday.stream())
+                    .collect(Collectors.toList());
+
+            // Sortowanie: Najpierw wg priorytetu (malejąco), potem wg daty (rosnąco)
+            openTasks.sort(Comparator.comparing(Task::getPriority).reversed()
+                    .thenComparing(Task::getDate));
+
             model.addAttribute("openTasks", openTasks);
 
             // Przekaż listy do widoku (dla formularzy i list na dole strony)
@@ -280,7 +291,6 @@ public class AppController {
         return "redirect:/";
     }
 
-    // <<< NOWA METODA DO USUWANIA OSOBY (KASKADOWO) >>>
     @Transactional
     @GetMapping("/delete-person")
     public String deletePerson(@RequestParam(name = "id") Long personId) {
@@ -357,6 +367,7 @@ public class AppController {
             @RequestParam(name = "assigneeId") Long assigneeId,
             @RequestParam(name = "description") String description,
             @RequestParam(name = "date") LocalDate date, // Termin wykonania
+            @RequestParam(name = "priority", defaultValue = "3") int priority, // <<< DODANY PARAMETR
             @RequestParam(name = "month") String month
     ) {
         Optional<Person> assignerOpt = personRepository.findById(assignerId);
@@ -364,6 +375,7 @@ public class AppController {
 
         if (assignerOpt.isPresent() && assigneeOpt.isPresent()) {
             Task task = new Task(description, assignerOpt.get(), assigneeOpt.get(), date, false);
+            task.setPriority(priority); // <<< USTAWIANIE PRIORYTETU
             taskRepository.save(task);
         }
         return "redirect:/?activePersonId=" + assigneeId + "&month=" + month;
@@ -417,6 +429,7 @@ public class AppController {
             @RequestParam(name = "assigneeId") Long assigneeId,
             @RequestParam(name = "description") String description,
             @RequestParam(name = "recurrenceType") RecurrenceType recurrenceType,
+            @RequestParam(name = "priority", defaultValue = "3") int priority, // <<< DODANY PARAMETR
             @RequestParam(name = "dayOfMonth", required = false) Integer dayOfMonth,
             @RequestParam(name = "onMonday", required = false) boolean onMonday,
             @RequestParam(name = "onTuesday", required = false) boolean onTuesday,
@@ -435,6 +448,7 @@ public class AppController {
             rt.setAssignee(assigneeOpt.get());
             rt.setDescription(description);
             rt.setRecurrenceType(recurrenceType);
+            rt.setPriority(priority); // <<< USTAWIANIE PRIORYTETU
 
             if (recurrenceType == RecurrenceType.MONTHLY) {
                 rt.setDayOfMonth(dayOfMonth != null ? dayOfMonth : 1);

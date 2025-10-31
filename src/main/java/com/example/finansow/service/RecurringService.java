@@ -32,7 +32,7 @@ public class RecurringService {
 
         // A. GENEROWANIE STAŁYCH TRANSAKCJI
         List<RecurringTransaction> recurringTransactions = recurringTransactionRepo.findByPersonId(personId);
-        
+
         for (RecurringTransaction rt : recurringTransactions) {
             LocalDate transactionDate;
             try {
@@ -42,40 +42,40 @@ public class RecurringService {
                 // Jeśli dzień miesiąca jest nieprawidłowy (np. 31 w lutym), użyj końca miesiąca
                 transactionDate = targetMonth.atEndOfMonth();
             }
-            
+
             // Sprawdzanie, czy transakcja została już wygenerowana dla tego miesiąca
             boolean exists = transactionRepository.existsByPersonIdAndRecurringOriginIdAndDateBetween(
-                personId, rt.getId(), startDate, endDate
+                    personId, rt.getId(), startDate, endDate
             );
 
             if (!exists) {
                 LocalDate dueDate = transactionDate.plusDays(rt.getDaysUntilDue());
 
                 Transaction newTransaction = new Transaction(
-                    rt.getDescription(),
-                    rt.getAmount(),
-                    transactionDate, 
-                    rt.getType(),
-                    person,
-                    false, // paid = false
-                    false,
-                    null,  
-                    dueDate
+                        rt.getDescription(),
+                        rt.getAmount(),
+                        transactionDate,
+                        rt.getType(),
+                        person,
+                        false, // paid = false
+                        false,
+                        null,
+                        dueDate
                 );
                 newTransaction.setRecurringOriginId(rt.getId());
                 transactionRepository.save(newTransaction);
             }
         }
-        
+
         // B. GENEROWANIE CYKLICZNYCH ZADAŃ
         List<RecurringTask> recurringTasks = recurringTaskRepo.findByAssigneeId(personId);
-        
+
         for (RecurringTask rtask : recurringTasks) {
             LocalDate currentDate = startDate;
 
             while (!currentDate.isAfter(endDate)) {
                 boolean shouldGenerate = false;
-                
+
                 // 1. Sprawdzanie warunku generacji
                 if (rtask.getRecurrenceType() == RecurrenceType.MONTHLY && rtask.getDayOfMonth() == currentDate.getDayOfMonth()) {
                     shouldGenerate = true;
@@ -97,18 +97,22 @@ public class RecurringService {
                 // 2. Jeśli należy wygenerować i zadanie nie istnieje
                 if (shouldGenerate) {
                     boolean exists = taskRepository.existsByAssigneeIdAndRecurringOriginIdAndDate(
-                        personId, rtask.getId(), currentDate
+                            personId, rtask.getId(), currentDate
                     );
 
                     if (!exists) {
-                         Task newTask = new Task(
-                            rtask.getDescription(),
-                            rtask.getAssigner(),
-                            rtask.getAssignee(),
-                            currentDate, 
-                            false
+                        Task newTask = new Task(
+                                rtask.getDescription(),
+                                rtask.getAssigner(),
+                                rtask.getAssignee(),
+                                currentDate,
+                                false
                         );
                         newTask.setRecurringOriginId(rtask.getId());
+
+                        // <<< POPRAWKA: Kopiowanie priorytetu z reguły do zadania >>>
+                        newTask.setPriority(rtask.getPriority());
+
                         taskRepository.save(newTask);
                     }
                 }

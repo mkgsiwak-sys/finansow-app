@@ -13,14 +13,14 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // Znajdź zadania wg terminu wykonania
     List<Task> findByAssigneeIdAndDateBetween(Long assigneeId, LocalDate startDate, LocalDate endDate);
 
-    // DODANE: Dla Aktywnej Listy Zadań (wszystkie niezakończone)
-    List<Task> findByAssigneeIdAndCompleted(Long assigneeId, boolean completed);
+    // <<< ZMIANA: Lista zadań tylko na DZIŚ >>>
+    List<Task> findByAssigneeIdAndCompletedAndDate(Long assigneeId, boolean completed, LocalDate date);
 
     // Dla Generatora Cyklicznych Zadań (sprawdza, czy już wygenerowano dla danej reguły)
     boolean existsByAssigneeIdAndRecurringOriginIdAndDate(
             Long assigneeId, Long recurringOriginId, LocalDate date);
 
-    // DODANE: Dla Archiwizacji (znajdź ukończone zadania starsze niż X data)
+    // <<< POPRAWKA: Usunięto duplikat. Ta metoda jest używana dla zadań zaległych ORAZ archiwizacji >>>
     List<Task> findByAssigneeIdAndCompletedAndDateBefore(Long assigneeId, boolean completed, LocalDate date);
 
     // <<< NOWE METODY DO USUWANIA OSOBY >>>
