@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
         body {
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -38,10 +39,6 @@
             justify-content: space-between;
             font-size: 0.75rem;
         }
-
-        /* MODYFIKACJA: Kalendarz jest teraz zawsze w trybie "pełnym" (z listą),
-          ale zachowujemy style kropek dla responsywności na małych ekranach.
-        */
 
         /* --- TRYB MAŁY (np. mobilki w widoku 'landscape') --- */
         @media (max-width: 640px) {
@@ -431,6 +428,18 @@
 
         <div th:if="${activePerson != null}" class="mt-12">
             <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
+                <i data-lucide="home" class="w-7 h-7 text-cyan-600"></i> Sterowanie Domem
+            </h2>
+
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <div id="tuya-loading" class="text-center text-gray-500">Ładowanie urządzeń...</div>
+                <div id="tuya-devices-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${activePerson != null}" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
                 <i data-lucide="settings" class="w-7 h-7 text-purple-600"></i> Zarządzanie Regułami
             </h2>
 
@@ -628,11 +637,6 @@
     // Aktywacja ikon Lucide
     lucide.createIcons();
 
-    // <<< USUNIĘTO: Zmienne dla Chart.js >>>
-
-    // --- USUNIĘTO: LOGIKA WYKRESU CHART.JS ---
-
-
     // --- ZAKTUALIZOWANA LOGIKA MODALI ---
 
     // Modal: Dodaj Osobę
@@ -647,7 +651,6 @@
         var container = document.getElementById('addTransactionModalContainer');
         container.classList.toggle('hidden');
         container.style.display = container.classList.contains('hidden') ? 'none' : 'flex';
-        // Ukryj menu FAB po wybraniu opcji
         document.getElementById('fabMenu').classList.add('hidden');
     }
 
@@ -656,7 +659,6 @@
         var container = document.getElementById('addTaskModalContainer');
         container.classList.toggle('hidden');
         container.style.display = container.classList.contains('hidden') ? 'none' : 'flex';
-        // Ukryj menu FAB po wybraniu opcji
         document.getElementById('fabMenu').classList.add('hidden');
     }
 
@@ -664,7 +666,7 @@
     function toggleFabMenu() {
         var menu = document.getElementById('fabMenu');
         menu.classList.toggle('hidden');
-        lucide.createIcons(); // Odśwież ikony po pokazaniu menu
+        lucide.createIcons();
     }
 
     // Modal: Szczegóły Dnia
@@ -681,7 +683,6 @@
         if (monthly) monthly.style.display = type === 'MONTHLY' ? 'block' : 'none';
         if (weekly) weekly.style.display = type === 'WEEKLY' ? 'block' : 'none';
     }
-
 
     // --- LOGIKA MODALA SZCZEGÓŁÓW DNIA (bez zmian) ---
     document.getElementById('calendarGridWrapper').addEventListener('click', function(e) {
@@ -766,6 +767,119 @@
         }
     }
 
+    // ===========================================
+    // === POPRAWIONA LOGIKA: Sterowanie TUYA ===
+    // ===========================================
+
+    function loadTuyaDevices() {
+        const listContainer = document.getElementById('tuya-devices-list');
+        const loadingDiv = document.getElementById('tuya-loading');
+        if (!listContainer) return;
+
+        fetch('/api/tuya/devices')
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                listContainer.innerHTML = '';
+
+                // === POPRAWKA #1: Sprawdzamy data.result (który jest listą), a nie data.result.list ===
+                if (data.result && data.result.length > 0) {
+
+                    // === POPRAWKA #2: Iterujemy po data.result, a nie data.result.list ===
+                    data.result.forEach(device => {
+                        let isOnline = device.online;
+
+                        // === POPRAWKA #3: Usunięto logikę 'isOn' (device.status) ===
+                        // Ten endpoint zwraca tylko 'online', a nie stan (np. 'switch_1').
+                        // Przyciski będą teraz statyczne (Włącz / Wyłącz).
+                        // Domyślny kod przełącznika, w razie potrzeby można go zmienić.
+                        let switchCode = 'switch_1';
+
+                        const deviceHtml = `
+                                <div class="p-4 border rounded-lg flex justify-between items-center ${isOnline ? 'bg-white' : 'bg-gray-100 opacity-60'}">
+                                    <span class="font-medium ${isOnline ? 'text-gray-800' : 'text-gray-500'}">
+                                        <i data-lucide="zap" class="w-4 h-4 inline-block ${isOnline ? 'text-green-500' : 'text-gray-400'}"></i>
+                                        ${device.name}
+                                        ${isOnline ? '' : ' (Offline)'}
+                                    </span>
+
+                                    <div class="flex gap-2">
+                                        <button
+                                            onclick="sendTuyaCommand(event, '${device.id}', '${switchCode}', true)"
+                                            class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium hover:bg-green-600 transition"
+                                            ${isOnline ? '' : 'disabled'}>
+                                            Włącz
+                                        </button>
+                                        <button
+                                            onclick="sendTuyaCommand(event, '${device.id}', '${switchCode}', false)"
+                                            class="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium hover:bg-red-600 transition"
+                                            ${isOnline ? '' : 'disabled'}>
+                                            Wyłącz
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        listContainer.insertAdjacentHTML('beforeend', deviceHtml);
+                    });
+                } else {
+                    // Ten komunikat jest teraz poprawnie wyświetlany, jeśli lista jest pusta
+                    listContainer.innerHTML = '<p class="text-center text-gray-500">Nie znaleziono żadnych urządzeń powiązanych z tym kontem.</p>';
+                }
+                lucide.createIcons();
+            })
+            .catch(error => {
+                console.error('Błąd pobierania urządzeń Tuya:', error);
+                loadingDiv.style.display = 'none';
+                listContainer.innerHTML = `<p class="text-center text-red-500">Wystąpił błąd: ${error.message}</p>`;
+            });
+    }
+
+    // Funkcja do wysyłania poleceń
+    function sendTuyaCommand(event, deviceId, code, value) {
+        // Tymczasowe wyłączenie przycisku, aby uniknąć podwójnych kliknięć
+        if (event && event.target) {
+            event.target.disabled = true;
+            event.target.textContent = '...';
+        }
+
+        // === POPRAWKA #4: Zmieniono format body na zgodny z TuyaCommandRequest DTO ===
+        const bodyPayload = {
+            commands: [
+                { code: code, value: value }
+            ]
+        };
+
+        fetch(`/api/tuya/devices/${deviceId}/command`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(bodyPayload) // Używamy poprawionego body
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Błąd serwera przy wysyłaniu polecenia.');
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('Polecenie wysłane:', result);
+                // Po sekundzie odśwież listę
+                // Uwaga: Lista nadal nie pokaże nowego statusu Włącz/Wyłącz,
+                // ale przynajmniej przyciski pojawią się na nowo.
+                setTimeout(loadTuyaDevices, 1000);
+            })
+            .catch(error => {
+                console.error('Błąd wysyłania polecenia Tuya:', error);
+                // W razie błędu odśwież listę, aby przywrócić przycisk
+                setTimeout(loadTuyaDevices, 1000);
+            });
+    }
 
     // --- ZAKTUALIZOWANA LOGIKA STARTOWA ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -778,6 +892,11 @@
         document.getElementById('addPersonFormContainer').style.display = 'none';
         document.getElementById('addTransactionModalContainer').style.display = 'none';
         document.getElementById('addTaskModalContainer').style.display = 'none';
+
+        // Załaduj urządzenia Tuya przy starcie (jeśli kontener istnieje)
+        if (document.getElementById('tuya-devices-list')) {
+            loadTuyaDevices();
+        }
 
         lucide.createIcons();
     });
