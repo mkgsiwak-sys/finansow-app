@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -20,7 +22,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
 import java.util.Formatter;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -47,38 +51,90 @@ public class TuyaService {
     }
 
     /**
-     * Metoda do pobierania listy wszystkich urządzeń.
-     * === OSTATECZNA POPRAWKA: Używa tej samej logiki podpisu co /v1.0/token ===
+     * === GŁÓWNA POPRAWKA: Metoda do pobierania urządzeń WRAZ Z REALNYM STATUSEM ===
+     * Krok 1: Pobiera listę urządzeń (z /v2.0)
+     * Krok 2: Pobiera ich realny status (z /v1.0/devices/{id}/status) RÓWNOLEGLE
+     * Krok 3: Scala wyniki i zwraca do frontendu.
      */
-    public Mono<TuyaApiDtos.TuyaDeviceListResponse> getDevices() {
+    public Mono<TuyaApiDtos.TuyaDeviceMergedListResponse> getDevices() {
         return getValidToken().flatMap(token -> {
 
-            String pathWithQuery = "/v2.0/cloud/thing/device?page_size=20";
-            log.info("Pobieranie urządzeń (v2.0) Endpoint: {}...", pathWithQuery);
-            log.debug("Używam tokena dla UID: {}", token.uid());
+            // --- KROK 1: Pobierz listę urządzeń (z mylącym statusem 'online') ---
+            String v2Path = "/v2.0/cloud/thing/device?page_size=20";
+            log.info("Krok 1: Pobieranie listy urządzeń (v2.0)...");
 
-            // --- KLUCZOWA ZMIANA ---
-            // Używamy teraz buildera v1.0, o którym wiemy, że działa.
-            // Przekazujemy mu PEŁNĄ ścieżkę do podpisu.
-            return buildSignedRequestV1(token, HttpMethod.GET, pathWithQuery, BodyInserters.empty())
-                    // Dodajemy tylko nagłówki specyficzne dla v2.0
+            Mono<TuyaApiDtos.TuyaDeviceListResponse> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, BodyInserters.empty())
                     .header("sign_version", "2.0")
                     .header("mode", "cors")
                     .retrieve()
                     .onStatus(status -> status.isError(), this::handleError)
-                    .bodyToMono(TuyaApiDtos.TuyaDeviceListResponse.class)
-                    .doOnSuccess(response -> {
-                        if (response.success() && response.result() != null) {
-                            log.info("SUKCES! Pomyślnie pobrano {} urządzeń!", response.result().size());
-                        } else {
-                            log.error("API /getDevices zwróciło success=false. Kod: {}, Wiadomość: {}", response.code(), response.msg());
-                        }
-                    });
+                    .bodyToMono(TuyaApiDtos.TuyaDeviceListResponse.class);
+
+            return deviceListMono.flatMap(deviceListResponse -> {
+                if (!deviceListResponse.success() || deviceListResponse.result() == null || deviceListResponse.result().isEmpty()) {
+                    log.warn("Krok 1 FAILED. API v2.0 zwróciło błąd lub pustą listę. Kod: {}, Wiadomość: {}",
+                            deviceListResponse.code(), deviceListResponse.msg());
+                    return Mono.just(new TuyaApiDtos.TuyaDeviceMergedListResponse(
+                            Collections.emptyList(), true, System.currentTimeMillis(), deviceListResponse.tid(), null, null
+                    ));
+                }
+
+                List<TuyaApiDtos.TuyaDevice> devices = deviceListResponse.result();
+                log.info("Krok 1 SUKCES. Pobrane nazwy {} urządzeń.", devices.size());
+
+                // --- KROK 2: Pobierz realny status dla każdego urządzenia RÓWNOLEGLE ---
+                log.info("Krok 2: Uruchamiam {} równoległych zapytań o status (v1.0)...", devices.size());
+
+                // Tworzymy strumień (Flux) z listy urządzeń
+                return Flux.fromIterable(devices)
+                        // Uruchamiamy zapytania na osobnym, równoległym wątku
+                        .parallel()
+                        .runOn(Schedulers.parallel())
+                        // Dla każdego urządzenia z listy 'devices', wywołaj 'getDeviceStatus'
+                        .flatMap(device ->
+                                // Wywołaj naszą istniejącą, pojedynczą metodę
+                                this.getDeviceStatus(device.id())
+                                        .map(statusResponse -> {
+                                            // KROK 3: Scalanie (dla pojedynczego elementu)
+                                            // 'statusResponse.result()' to List<TuyaDeviceStatus>
+                                            // 'statusResponse.success()' - status online jest implikowany przez sukces
+                                            return new TuyaApiDtos.TuyaDeviceMerged(
+                                                    device.id(),
+                                                    device.name(),
+                                                    device.productName(),
+                                                    statusResponse.success(), // Realny status online
+                                                    statusResponse.result()   // Realne statusy (np. switch_1)
+                                            );
+                                        })
+                                        // Jeśli pojedyncze zapytanie zawiedzie, stwórz 'offline' obiekt
+                                        .onErrorResume(e -> {
+                                            log.warn("Nie udało się pobrać statusu dla {}: {}", device.id(), e.getMessage());
+                                            return Mono.just(new TuyaApiDtos.TuyaDeviceMerged(
+                                                    device.id(),
+                                                    device.name(),
+                                                    device.productName(),
+                                                    false, // Oznacz jako offline
+                                                    Collections.emptyList()
+                                            ));
+                                        })
+                        )
+                        // Zbierz wszystkie scalone wyniki z powrotem do listy
+                        .sequential()
+                        .collectList()
+                        .map(mergedList -> {
+                            log.info("Krok 3 SUKCES. Scalono wyniki dla {} urządzeń.", mergedList.size());
+                            return new TuyaApiDtos.TuyaDeviceMergedListResponse(
+                                    mergedList, true, System.currentTimeMillis(), "merged-tid", null, null
+                            );
+                        });
+            });
         });
     }
 
+
     /**
-     * Metoda do pobierania statusu konkretnego urządzenia.
+     * Metoda do pobierania statusu POJEDYNCZEGO urządzenia.
+     * Wywołuje: GET /v1.0/devices/{id}/status
      */
     public Mono<TuyaApiDtos.TuyaDeviceStatusResponse> getDeviceStatus(String deviceId) {
         String path = "/v1.0/devices/" + deviceId + "/status";
@@ -87,6 +143,11 @@ public class TuyaService {
                         .retrieve()
                         .onStatus(status -> status.isError(), this::handleError)
                         .bodyToMono(TuyaApiDtos.TuyaDeviceStatusResponse.class)
+                        .doOnSuccess(response -> {
+                            if (!response.success()) {
+                                log.warn("Zapytanie o status dla {} zwróciło success=false. Kod: {}", deviceId, response.code());
+                            }
+                        })
         );
     }
 
@@ -168,7 +229,7 @@ public class TuyaService {
 
     /**
      * Używa "złożonego" podpisu v1.0 (bez tokena) z PEŁNĄ ścieżką.
-     * Ta metoda jest POPRAWNA (potwierdzone logami z 21:10).
+     * Ta metoda jest POPRAWNA (potwierdzone logami).
      */
     private Mono<TuyaApiDtos.TuyaTokenResponse> fetchNewToken() {
         String pathWithQuery = "/v1.0/token?grant_type=1";
@@ -273,9 +334,7 @@ public class TuyaService {
         return stringToSign;
     }
 
-    // --- Metody buildSignedRequestV2 i buildStringToSignV2 zostały USUNIĘTE ---
-    // --- (Poniżej tylko kryptografia i obsługa błędów) ---
-
+    // --- NARZĘDZIA KRYPTOGRAFICZNE (Wspólne) ---
 
     private String hmacSha256(String data, String key) {
         try {

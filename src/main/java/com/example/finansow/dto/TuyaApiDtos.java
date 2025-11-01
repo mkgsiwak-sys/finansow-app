@@ -5,56 +5,35 @@ import java.util.List;
 
 /**
  * Kontener na wszystkie rekordy DTO używane do komunikacji z Tuya API.
- * Używamy @JsonProperty, aby jawnie pokazać mapowanie,
- * chociaż konfiguracja SNAKE_CASE w .properties też by to obsłużyła.
  */
 public final class TuyaApiDtos {
 
     // --- Token ---
 
-    /**
-     * Wewnętrzna reprezentacja tokena, używana w serwisie.
-     * Przechowuje czas wygaśnięcia jako bezwzględny timestamp.
-     *
-     * === TUTAJ ZMIANA: Dodano pole 'uid' ===
-     */
     public record TuyaToken(
             String accessToken,
             String refreshToken,
             long expiresAtMillis,
-            String uid // Przechowujemy UID użytkownika zwrócony przy logowaniu
+            String uid
     ) {
-        /**
-         * Sprawdza, czy token wygasł (z 60-sekundowym buforem bezpieczeństwa).
-         */
         public boolean isExpired() {
             long safetyMargin = 60 * 1000; // 60 sekund
             return System.currentTimeMillis() > (expiresAtMillis - safetyMargin);
         }
     }
 
-    /**
-     * Obiekt zagnieżdżony w odpowiedzi na żądanie tokena.
-     */
     public record TuyaTokenResult(
             @JsonProperty("access_token") String accessToken,
             @JsonProperty("refresh_token") String refreshToken,
             @JsonProperty("expires_in") int expiresIn,
-            String uid // Ten UID jest kluczowy
+            String uid
     ) {}
 
-    /**
-     * Główna odpowiedź API podczas pobierania tokena.
-     *
-     * === POPRAWKA: Dodane pola 'code' i 'msg' do przechwytywania błędów ===
-     * Te pola będą 'null' przy sukcesie, ale zapełnią się przy błędzie.
-     */
     public record TuyaTokenResponse(
             TuyaTokenResult result,
             boolean success,
             long t,
             String tid,
-            // Pola do przechwytywania błędów
             Integer code,
             String msg
     ) {}
@@ -63,37 +42,35 @@ public final class TuyaApiDtos {
     // --- Urządzenia (Devices) ---
 
     /**
-     * Reprezentacja pojedynczego urządzenia z listy.
+     * DTO dla pierwotnej odpowiedzi z /v2.0/cloud/thing/device
+     * Zawiera nieaktualny status 'online'.
      */
     public record TuyaDevice(
             String id,
             String name,
-            String productName, // Zmapowane z product_name przez SNAKE_CASE
-            boolean online,
+            String productName,
+            boolean online, // Ten status jest często nieaktualny!
             String model,
             String ip,
-            String localKey, // Zmapowane z local_key
+            String localKey,
             long activeTime,
             long createTime,
             long updateTime
     ) {}
 
     /**
-     * Główna odpowiedź API podczas pobierania listy urządzeń.
-     *
-     * === POPRAWKA: Dodane pola 'code' i 'msg' do przechwytywania błędów ===
+     * Główna odpowiedź API podczas pobierania listy urządzeń v2.0.
      */
     public record TuyaDeviceListResponse(
             List<TuyaDevice> result,
             boolean success,
             long t,
             String tid,
-            // Pola do przechwytywania błędów
             Integer code,
             String msg
     ) {}
 
-    // --- Status Urządzenia ---
+    // --- Status Urządzenia (Pojedynczy) ---
 
     /**
      * Reprezentacja pojedynczego statusu (np. "switch_1": true)
@@ -104,50 +81,65 @@ public final class TuyaApiDtos {
     ) {}
 
     /**
-     * Główna odpowiedź API podczas pobierania statusu urządzenia.
-     *
-     * === POPRAWKA: Dodane pola 'code' i 'msg' do przechwytywania błędów ===
+     * DTO dla odpowiedzi z endpointu /v1.0/devices/{id}/status (pojedyncze urządzenie)
      */
     public record TuyaDeviceStatusResponse(
             List<TuyaDeviceStatus> result,
             boolean success,
             long t,
             String tid,
-            // Pola do przechwytywania błędów
             Integer code,
             String msg
     ) {}
 
 
-    // --- Komendy ---
+    // ===================================================================
+    // === NOWE REKORDY DLA POPRAWKI STATUSU "ONLINE" (Wersja 2) ===
+    // ===================================================================
 
     /**
-     * Pojedyncza komenda do wysłania (np. code: "switch_1", value: true)
+     * NOWY: Scalony obiekt, który wysyłamy do frontendu.
+     * Zawiera nazwę z v2.0 oraz realny status 'online' i 'status' z v1.0.
      */
+    public record TuyaDeviceMerged(
+            String id,
+            String name,
+            String productName,
+            boolean online, // Poprawiony, realny status
+            List<TuyaDeviceStatus> status // Lista statusów, np. switch_1
+    ) {}
+
+    /**
+     * NOWY: Główna odpowiedź, którą /api/tuya/devices wysyła teraz do frontendu.
+     */
+    public record TuyaDeviceMergedListResponse(
+            List<TuyaDeviceMerged> result,
+            boolean success,
+            long t,
+            String tid,
+            Integer code,
+            String msg
+    ) {}
+
+    // ===================================================================
+
+
+    // --- Komendy ---
+
     public record TuyaCommand(
             String code,
             Object value
     ) {}
 
-    /**
-     * Żądanie wysłania komendy (lub wielu komend naraz).
-     * To zastępuje Twoją wewnętrzną klasę TuyaCommand w kontrolerze.
-     */
     public record TuyaCommandRequest(
             List<TuyaCommand> commands
     ) {}
 
-    /**
-     * Odpowiedź na wysłanie komendy (zazwyczaj po prostu "true").
-     *
-     * === POPRAWKA: Dodane pola 'code' i 'msg' do przechwytywania błędów ===
-     */
     public record TuyaCommandResponse(
             boolean result,
             boolean success,
             long t,
             String tid,
-            // Pola do przechwytywania błędów
             Integer code,
             String msg
     ) {}

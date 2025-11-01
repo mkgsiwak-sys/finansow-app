@@ -8,17 +8,18 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/tuya") // Utrzymujemy Twój istniejący prefix API
-@RequiredArgsConstructor // Zastępuje @Autowired konstruktorem
+@RequestMapping("/api/tuya")
+@RequiredArgsConstructor
 public class TuyaController {
 
     private final TuyaService tuyaService;
 
     /**
      * Endpoint do pobierania listy urządzeń.
+     * === POPRAWKA: Zwraca teraz nowy, scalony typ odpowiedzi ===
      */
     @GetMapping("/devices")
-    public Mono<ResponseEntity<TuyaApiDtos.TuyaDeviceListResponse>> getDevices() {
+    public Mono<ResponseEntity<TuyaApiDtos.TuyaDeviceMergedListResponse>> getDevices() {
         return tuyaService.getDevices()
                 .map(ResponseEntity::ok)
                 .onErrorResume(e -> Mono.just(
@@ -43,21 +44,11 @@ public class TuyaController {
 
     /**
      * Endpoint do wysyłania poleceń (np. włącz/wyłącz).
-     * Używa teraz nowego DTO TuyaCommandRequest.
-     * Przykładowe body:
-     * {
-     * "commands": [
-     * {
-     * "code": "switch_1",
-     * "value": true
-     * }
-     * ]
-     * }
      */
     @PostMapping("/devices/{deviceId}/command")
     public Mono<ResponseEntity<TuyaApiDtos.TuyaCommandResponse>> sendCommand(
             @PathVariable String deviceId,
-            @RequestBody TuyaApiDtos.TuyaCommandRequest commandRequest // Używamy DTO z TuyaApiDtos
+            @RequestBody TuyaApiDtos.TuyaCommandRequest commandRequest
     ) {
         return tuyaService.sendCommand(deviceId, commandRequest)
                 .map(ResponseEntity::ok)
@@ -65,10 +56,6 @@ public class TuyaController {
                         ResponseEntity.status(500).body(null)
                 ));
     }
-
-    // ===================================================================
-    // === NOWY ENDPOINT DIAGNOSTYCZNY ===
-    // ===================================================================
 
     /**
      * TEST DIAGNOSTYCZNY: Endpoint do pobierania statystyk
