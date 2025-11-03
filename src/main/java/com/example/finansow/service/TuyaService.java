@@ -10,7 +10,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -67,6 +66,7 @@ public class TuyaService {
             log.info("Krok 1: Pobieranie listy urządzeń (v2.0)...");
 
             Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, null)
+            Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, BodyInserters.empty())
                     .header("sign_version", "2.0")
                     .header("mode", "cors")
                     .retrieve()
@@ -388,7 +388,7 @@ public class TuyaService {
             return spec;
         }
 
-        return spec.body(BodyInserters.fromValue(body));
+        return spec.bodyValue(body);
     }
 
 
