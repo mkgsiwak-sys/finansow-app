@@ -59,10 +59,23 @@ public final class TuyaApiDtos {
     ) {}
 
     /**
+     * Result wrapper zwracany przez endpoint /v2.0/cloud/thing/device.
+     * Zawiera paginowaną listę urządzeń w polu "list".
+     */
+    public record TuyaDeviceListResult(
+            List<TuyaDevice> list,
+            Integer total,
+            Integer size,
+            Integer current,
+            @JsonProperty("has_more") Boolean hasMore,
+            @JsonProperty("next_row_key") String nextRowKey
+    ) {}
+
+    /**
      * Główna odpowiedź API podczas pobierania listy urządzeń v2.0.
      */
     public record TuyaDeviceListResponse(
-            List<TuyaDevice> result,
+            TuyaDeviceListResult result,
             boolean success,
             long t,
             String tid,
