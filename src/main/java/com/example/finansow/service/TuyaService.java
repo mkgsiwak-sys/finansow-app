@@ -191,42 +191,43 @@ public class TuyaService {
     }
 
     private Mono<TuyaApiDtos.TuyaToken> refreshAndGetToken() {
-        tokenRefreshLock.lock();
-        try {
+        return Mono.defer(() -> {
+            tokenRefreshLock.lock();
+
+            Mono<TuyaApiDtos.TuyaToken> pipeline;
             if (currentToken == null || currentToken.isExpired()) {
                 log.debug("Token wygasł lub nie istnieje. Rozpoczynam pobieranie nowego tokena (v1.0)...");
-                TuyaApiDtos.TuyaTokenResponse response = fetchNewToken().block();
-                if (response == null || !response.success() || response.result() == null) {
-                    String errorMsg = "Nieznany błąd (response był null)";
-                    if (response != null) {
-                        errorMsg = "Kod: " + response.code() + ", Wiadomość: " + response.msg();
-                        log.error("Nie udało się pobrać tokena Tuya. Powód: {}", errorMsg);
-                        log.error("Pełna odpowiedź błędu z Tuya: {}", response);
-                    } else {
-                        log.error(errorMsg);
-                    }
-                    throw new RuntimeException("Nie udało się pobrać tokena Tuya. " + errorMsg);
-                }
-                log.info("Pomyślnie pobrano nowy token Tuya.");
-                TuyaApiDtos.TuyaTokenResult result = response.result();
-                long expiresAt = System.currentTimeMillis() + (result.expiresIn() * 1000L);
-                log.info("Pobrano token dla połączonego konta UID: {}", result.uid());
-                this.currentToken = new TuyaApiDtos.TuyaToken(
-                        result.accessToken(),
-                        result.refreshToken(),
-                        expiresAt,
-                        result.uid()
-                );
+
+                pipeline = fetchNewToken()
+                        .switchIfEmpty(Mono.error(new RuntimeException("Nie udało się pobrać tokena Tuya. Odpowiedź była pusta.")))
+                        .flatMap(response -> {
+                            if (!response.success() || response.result() == null) {
+                                String errorMsg = "Kod: " + response.code() + ", Wiadomość: " + response.msg();
+                                log.error("Nie udało się pobrać tokena Tuya. Powód: {}", errorMsg);
+                                log.error("Pełna odpowiedź błędu z Tuya: {}", response);
+                                return Mono.error(new RuntimeException("Nie udało się pobrać tokena Tuya. " + errorMsg));
+                            }
+
+                            TuyaApiDtos.TuyaTokenResult result = response.result();
+                            long expiresAt = System.currentTimeMillis() + (result.expiresIn() * 1000L);
+                            log.info("Pobrano token dla połączonego konta UID: {}", result.uid());
+                            this.currentToken = new TuyaApiDtos.TuyaToken(
+                                    result.accessToken(),
+                                    result.refreshToken(),
+                                    expiresAt,
+                                    result.uid()
+                            );
+                            log.info("Pomyślnie pobrano nowy token Tuya.");
+                            return Mono.just(this.currentToken);
+                        })
+                        .doOnError(e -> log.error("Krytyczny błąd podczas odświeżania tokena", e));
             } else {
                 log.debug("Token został już odświeżony przez inny wątek.");
+                pipeline = Mono.just(this.currentToken);
             }
-            return Mono.just(this.currentToken);
-        } catch (Exception e) {
-            log.error("Krytyczny błąd podczas odświeżania tokena", e);
-            return Mono.error(e);
-        } finally {
-            tokenRefreshLock.unlock();
-        }
+
+            return pipeline.doFinally(signalType -> tokenRefreshLock.unlock());
+        });
     }
 
     /**
