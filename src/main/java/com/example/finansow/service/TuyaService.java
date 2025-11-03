@@ -10,7 +10,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -26,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Formatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
@@ -65,6 +65,7 @@ public class TuyaService {
             String v2Path = "/v2.0/cloud/thing/device?page_size=20";
             log.info("Krok 1: Pobieranie listy urządzeń (v2.0)...");
 
+            Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, null)
             Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, BodyInserters.empty())
                     .header("sign_version", "2.0")
                     .header("mode", "cors")
@@ -236,7 +237,7 @@ public class TuyaService {
     public Mono<TuyaApiDtos.TuyaDeviceStatusResponse> getDeviceStatus(String deviceId) {
         String path = "/v1.0/devices/" + deviceId + "/status";
         return getValidToken().flatMap(token ->
-                buildSignedRequestV1(token, HttpMethod.GET, path, BodyInserters.empty())
+                buildSignedRequestV1(token, HttpMethod.GET, path, null)
                         .retrieve()
                         .onStatus(status -> status.isError(), this::handleError)
                         .bodyToMono(TuyaApiDtos.TuyaDeviceStatusResponse.class)
@@ -269,7 +270,7 @@ public class TuyaService {
         return getValidToken().flatMap(token -> {
             String path = "/v1.0/devices/statistics";
             log.info("Uruchamiam test diagnostyczny v1.0: GET /v1.0/devices/statistics");
-            return buildSignedRequestV1(token, HttpMethod.GET, path, BodyInserters.empty())
+            return buildSignedRequestV1(token, HttpMethod.GET, path, null)
                     .retrieve()
                     .onStatus(status -> status.isError(), this::handleError)
                     .bodyToMono(Object.class);
@@ -360,27 +361,6 @@ public class TuyaService {
      */
     private WebClient.RequestHeadersSpec<?> buildSignedRequestV1(
             TuyaApiDtos.TuyaToken token, HttpMethod method,
-            String pathWithQuery, BodyInserters.FormInserter<?> emptyBody
-    ) {
-        long t = System.currentTimeMillis();
-        String bodyHash = sha256("");
-        String stringToSign = buildStringToSignV1(
-                token.accessToken(), t, method.name(), bodyHash, pathWithQuery
-        );
-        String sign = hmacSha256(stringToSign, tuyaConfig.accessSecret());
-
-        return webClient.method(method)
-                .uri(pathWithQuery)
-                .header("client_id", tuyaConfig.accessId())
-                .header("access_token", token.accessToken())
-                .header("t", String.valueOf(t))
-                .header("sign", sign)
-                .header("sign_method", "HMAC-SHA256")
-                .body(emptyBody);
-    }
-
-    private WebClient.RequestHeadersSpec<?> buildSignedRequestV1(
-            TuyaApiDtos.TuyaToken token, HttpMethod method,
             String path, Object body
     ) {
         long t = System.currentTimeMillis();
@@ -396,14 +376,19 @@ public class TuyaService {
         );
         String sign = hmacSha256(stringToSign, tuyaConfig.accessSecret());
 
-        return webClient.method(method)
+        WebClient.RequestBodySpec spec = webClient.method(method)
                 .uri(path)
                 .header("client_id", tuyaConfig.accessId())
                 .header("access_token", token.accessToken())
                 .header("t", String.valueOf(t))
                 .header("sign", sign)
-                .header("sign_method", "HMAC-SHA256")
-                .body(BodyInserters.fromValue(body));
+                .header("sign_method", "HMAC-SHA256");
+
+        if (body == null) {
+            return spec;
+        }
+
+        return spec.bodyValue(body);
     }
 
 
