@@ -14,7 +14,6 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -25,12 +24,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Formatter;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
 public class TuyaService {
+
+    private static final int STATUS_FETCH_CONCURRENCY = 5;
 
     private final TuyaConfig tuyaConfig;
     private final WebClient webClient;
@@ -89,39 +89,26 @@ public class TuyaService {
 
                 // Tworzymy strumień (Flux) z listy urządzeń
                 return Flux.fromIterable(devices)
-                        // Uruchamiamy zapytania na osobnym, równoległym wątku
-                        .parallel()
-                        .runOn(Schedulers.parallel())
-                        // Dla każdego urządzenia z listy 'devices', wywołaj 'getDeviceStatus'
                         .flatMap(device ->
-                                // Wywołaj naszą istniejącą, pojedynczą metodę
                                 this.getDeviceStatus(device.id())
-                                        .map(statusResponse -> {
-                                            // KROK 3: Scalanie (dla pojedynczego elementu)
-                                            // 'statusResponse.result()' to List<TuyaDeviceStatus>
-                                            // 'statusResponse.success()' - status online jest implikowany przez sukces
-                                            return new TuyaApiDtos.TuyaDeviceMerged(
-                                                    device.id(),
-                                                    device.name(),
-                                                    device.productName(),
-                                                    statusResponse.success(), // Realny status online
-                                                    statusResponse.result()   // Realne statusy (np. switch_1)
-                                            );
-                                        })
-                                        // Jeśli pojedyncze zapytanie zawiedzie, stwórz 'offline' obiekt
+                                        .map(statusResponse -> new TuyaApiDtos.TuyaDeviceMerged(
+                                                device.id(),
+                                                device.name(),
+                                                device.productName(),
+                                                statusResponse.success(),
+                                                statusResponse.result()
+                                        ))
                                         .onErrorResume(e -> {
                                             log.warn("Nie udało się pobrać statusu dla {}: {}", device.id(), e.getMessage());
                                             return Mono.just(new TuyaApiDtos.TuyaDeviceMerged(
                                                     device.id(),
                                                     device.name(),
                                                     device.productName(),
-                                                    false, // Oznacz jako offline
+                                                    false,
                                                     Collections.emptyList()
                                             ));
                                         })
-                        )
-                        // Zbierz wszystkie scalone wyniki z powrotem do listy
-                        .sequential()
+                        , Math.max(1, Math.min(STATUS_FETCH_CONCURRENCY, devices.size())))
                         .collectList()
                         .map(mergedList -> {
                             log.info("Krok 3 SUKCES. Scalono wyniki dla {} urządzeń.", mergedList.size());
@@ -130,6 +117,19 @@ public class TuyaService {
                             );
                         });
             });
+        }).onErrorResume(e -> {
+            log.error("Nie udało się pobrać listy urządzeń Tuya", e);
+            String message = (e.getMessage() == null || e.getMessage().isBlank())
+                    ? "Nieznany błąd podczas komunikacji z Tuya API"
+                    : e.getMessage();
+            return Mono.just(new TuyaApiDtos.TuyaDeviceMergedListResponse(
+                    Collections.emptyList(),
+                    false,
+                    System.currentTimeMillis(),
+                    "error-tid",
+                    null,
+                    message
+            ));
         });
     }
 
