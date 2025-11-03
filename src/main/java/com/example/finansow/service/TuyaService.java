@@ -71,7 +71,10 @@ public class TuyaService {
                     .bodyToMono(TuyaApiDtos.TuyaDeviceListResponse.class);
 
             return deviceListMono.flatMap(deviceListResponse -> {
-                if (!deviceListResponse.success() || deviceListResponse.result() == null || deviceListResponse.result().isEmpty()) {
+                TuyaApiDtos.TuyaDeviceListResult deviceListResult = deviceListResponse.result();
+                List<TuyaApiDtos.TuyaDevice> devices = deviceListResult != null ? deviceListResult.list() : Collections.emptyList();
+
+                if (!deviceListResponse.success() || devices == null || devices.isEmpty()) {
                     log.warn("Krok 1 FAILED. API v2.0 zwróciło błąd lub pustą listę. Kod: {}, Wiadomość: {}",
                             deviceListResponse.code(), deviceListResponse.msg());
                     return Mono.just(new TuyaApiDtos.TuyaDeviceMergedListResponse(
@@ -79,7 +82,6 @@ public class TuyaService {
                     ));
                 }
 
-                List<TuyaApiDtos.TuyaDevice> devices = deviceListResponse.result();
                 log.info("Krok 1 SUKCES. Pobrane nazwy {} urządzeń.", devices.size());
 
                 // --- KROK 2: Pobierz realny status dla każdego urządzenia RÓWNOLEGLE ---

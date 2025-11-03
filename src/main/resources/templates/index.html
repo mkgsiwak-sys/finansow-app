@@ -819,7 +819,9 @@
                 }
                 listContainer.innerHTML = '';
 
-                const devices = data && Array.isArray(data.result) ? data.result : [];
+                const rawResult = data ? (data.result ?? data.list ?? []) : [];
+                const devicesData = Array.isArray(rawResult) ? rawResult : (rawResult.list ?? rawResult.devices ?? []);
+                const devices = Array.isArray(devicesData) ? devicesData : [];
                 if (devices.length === 0) {
                     listContainer.innerHTML = '<p class="text-center text-gray-500 py-4">Nie znaleziono żadnych urządzeń powiązanych z tym kontem.</p>';
                     return;
@@ -1005,7 +1007,8 @@
     }
 
     function buildTuyaDeviceCard(device) {
-        const statuses = Array.isArray(device.status) ? device.status : [];
+        const statusesRaw = device.status ?? device.status_list ?? [];
+        const statuses = Array.isArray(statusesRaw) ? statusesRaw : [];
         const booleanStatuses = statuses.filter(status => typeof status.value === 'boolean');
         const measurementStatuses = statuses.filter(status => typeof status.value !== 'boolean' && status.value !== null && status.value !== undefined);
         const hasMeasurements = measurementStatuses.length > 0;
@@ -1046,7 +1049,7 @@
             generic: 'Urządzenie'
         };
 
-        const isOnline = device.online === true || (Array.isArray(device.status) && device.status.length > 0);
+        const isOnline = (device.online ?? device.is_online) === true || statuses.length > 0;
         const iconColor = isOnline ? (iconColors[deviceType] || iconColors.generic) : 'text-gray-400';
         const onlinePillClass = isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600';
         const onlineDotClass = isOnline ? 'bg-green-500' : 'bg-gray-500';
@@ -1080,7 +1083,8 @@
             controlsHtml = '<p class="text-sm text-gray-500 mt-4">Brak danych do wyświetlenia dla tego urządzenia.</p>';
         }
 
-        const productNameHtml = device.productName ? `<p class="text-xs text-gray-500">${device.productName}</p>` : '';
+        const productName = device.productName ?? device.product_name;
+        const productNameHtml = productName ? `<p class="text-xs text-gray-500">${productName}</p>` : '';
         const typeLabel = typeDescriptions[deviceType] || typeDescriptions.generic;
 
         return `
