@@ -819,6 +819,12 @@
                 }
                 listContainer.innerHTML = '';
 
+                if (!data || data.success === false) {
+                    const message = (data && data.msg) ? data.msg : 'Nie udało się pobrać listy urządzeń.';
+                    listContainer.innerHTML = `<p class="text-center text-red-500 py-4">Wystąpił błąd: ${message}</p>`;
+                    return;
+                }
+
                 const rawResult = data ? (data.result ?? data.list ?? []) : [];
                 const devicesData = Array.isArray(rawResult) ? rawResult : (rawResult.list ?? rawResult.devices ?? []);
                 const devices = Array.isArray(devicesData) ? devicesData : [];
