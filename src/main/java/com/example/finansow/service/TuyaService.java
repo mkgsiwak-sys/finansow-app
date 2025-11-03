@@ -66,6 +66,7 @@ public class TuyaService {
             log.info("Krok 1: Pobieranie listy urządzeń (v2.0)...");
 
             Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, null)
+            Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, BodyInserters.empty())
                     .header("sign_version", "2.0")
                     .header("mode", "cors")
                     .retrieve()
