@@ -3,6 +3,7 @@ package com.example.finansow.service;
 import com.example.finansow.config.TuyaConfig;
 import com.example.finansow.dto.TuyaApiDtos;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -21,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Formatter;
 import java.util.List;
@@ -63,22 +65,27 @@ public class TuyaService {
             String v2Path = "/v2.0/cloud/thing/device?page_size=20";
             log.info("Krok 1: Pobieranie listy urządzeń (v2.0)...");
 
-            Mono<TuyaApiDtos.TuyaDeviceListResponse> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, BodyInserters.empty())
+            Mono<JsonNode> deviceListMono = buildSignedRequestV1(token, HttpMethod.GET, v2Path, BodyInserters.empty())
                     .header("sign_version", "2.0")
                     .header("mode", "cors")
                     .retrieve()
                     .onStatus(status -> status.isError(), this::handleError)
-                    .bodyToMono(TuyaApiDtos.TuyaDeviceListResponse.class);
+                    .bodyToMono(JsonNode.class);
 
-            return deviceListMono.flatMap(deviceListResponse -> {
-                TuyaApiDtos.TuyaDeviceListResult deviceListResult = deviceListResponse.result();
-                List<TuyaApiDtos.TuyaDevice> devices = deviceListResult != null ? deviceListResult.list() : Collections.emptyList();
+            return deviceListMono.flatMap(deviceListJson -> {
+                DeviceListEnvelope envelope = parseDeviceListEnvelope(deviceListJson);
+                List<TuyaApiDtos.TuyaDevice> devices = envelope.devices();
 
-                if (!deviceListResponse.success() || devices == null || devices.isEmpty()) {
+                if (!envelope.success() || devices.isEmpty()) {
                     log.warn("Krok 1 FAILED. API v2.0 zwróciło błąd lub pustą listę. Kod: {}, Wiadomość: {}",
-                            deviceListResponse.code(), deviceListResponse.msg());
+                            envelope.code(), envelope.msg());
                     return Mono.just(new TuyaApiDtos.TuyaDeviceMergedListResponse(
-                            Collections.emptyList(), true, System.currentTimeMillis(), deviceListResponse.tid(), null, null
+                            Collections.emptyList(),
+                            false,
+                            envelope.timestamp(),
+                            envelope.tid(),
+                            envelope.code(),
+                            envelope.msg()
                     ));
                 }
 
@@ -113,7 +120,12 @@ public class TuyaService {
                         .map(mergedList -> {
                             log.info("Krok 3 SUKCES. Scalono wyniki dla {} urządzeń.", mergedList.size());
                             return new TuyaApiDtos.TuyaDeviceMergedListResponse(
-                                    mergedList, true, System.currentTimeMillis(), "merged-tid", null, null
+                                    mergedList,
+                                    true,
+                                    envelope.timestamp(),
+                                    envelope.tid(),
+                                    null,
+                                    null
                             );
                         });
             });
@@ -131,6 +143,89 @@ public class TuyaService {
                     message
             ));
         });
+    }
+
+    private DeviceListEnvelope parseDeviceListEnvelope(JsonNode deviceListJson) {
+        if (deviceListJson == null || deviceListJson.isNull()) {
+            log.warn("Odpowiedź z Tuya (lista urządzeń) była pusta");
+            return new DeviceListEnvelope(Collections.emptyList(), false, System.currentTimeMillis(), null, null, "Pusta odpowiedź z Tuya");
+        }
+
+        long timestamp = deviceListJson.path("t").asLong(System.currentTimeMillis());
+        String tid = deviceListJson.path("tid").asText(null);
+        boolean success = deviceListJson.path("success").asBoolean(false);
+        Integer code = deviceListJson.hasNonNull("code") ? deviceListJson.get("code").asInt() : null;
+        String msg = deviceListJson.hasNonNull("msg") ? deviceListJson.get("msg").asText() : null;
+
+        List<TuyaApiDtos.TuyaDevice> devices = extractDevices(deviceListJson.path("result"));
+
+        return new DeviceListEnvelope(devices, success, timestamp, tid, code, msg);
+    }
+
+    private List<TuyaApiDtos.TuyaDevice> extractDevices(JsonNode resultNode) {
+        if (resultNode == null || resultNode.isMissingNode() || resultNode.isNull()) {
+            return Collections.emptyList();
+        }
+
+        JsonNode listNode;
+        if (resultNode.isArray()) {
+            listNode = resultNode;
+        } else if (resultNode.has("list")) {
+            listNode = resultNode.get("list");
+        } else {
+            listNode = resultNode;
+        }
+
+        if (listNode == null || listNode.isNull()) {
+            return Collections.emptyList();
+        }
+
+        List<TuyaApiDtos.TuyaDevice> devices = new ArrayList<>();
+
+        if (listNode.isArray()) {
+            listNode.forEach(node -> toDevice(node).ifPresent(devices::add));
+        } else {
+            toDevice(listNode).ifPresent(devices::add);
+        }
+
+        return devices;
+    }
+
+    private Optional<TuyaApiDtos.TuyaDevice> toDevice(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return Optional.empty();
+        }
+
+        String id = node.path("id").asText(null);
+        if (id == null || id.isBlank()) {
+            log.debug("Pominięto wpis urządzenia bez identyfikatora: {}", node);
+            return Optional.empty();
+        }
+
+        TuyaApiDtos.TuyaDevice device = new TuyaApiDtos.TuyaDevice(
+                id,
+                node.path("name").asText(null),
+                node.path("product_name").asText(null),
+                node.path("online").asBoolean(false),
+                node.path("model").asText(null),
+                node.path("ip").asText(null),
+                node.path("local_key").asText(null),
+                node.path("active_time").asLong(0L),
+                node.path("create_time").asLong(0L),
+                node.path("update_time").asLong(0L)
+        );
+
+        return Optional.of(device);
+    }
+
+    private record DeviceListEnvelope(
+            List<TuyaApiDtos.TuyaDevice> devices,
+            boolean success,
+            long timestamp,
+            String tid,
+            Integer code,
+            String msg
+    ) {
     }
 
 
