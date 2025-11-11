@@ -7,93 +7,157 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        body{font-family:'Inter','Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f4f6f8;min-height:100vh;padding-top:64px;transition:background-color .3s,color .3s}
-        .hidden-options{display:none}
-        .today{background-color:#e0f2fe!important}
-        .other-month{background-color:#f3f4f6;color:#9ca3af}
-        .calendar-day{aspect-ratio:1/1;padding:6px;transition:all .3s ease;position:relative;display:flex;flex-direction:column;justify-content:space-between;font-size:.75rem}
-        @media (max-width:640px){.calendar-day{min-height:80px}.event-list{display:none}.event-dots{display:flex;gap:2px;justify-content:flex-start}}
-        @media (min-width:641px){.calendar-day{min-height:120px;aspect-ratio:auto;overflow:visible;justify-content:flex-start}.event-list{display:block;max-height:100px;overflow-y:auto}.event-dots{display:none}}
-        .event-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-        .other-month{visibility:visible;opacity:.5}
-        .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin-bottom:4px;font-size:.75rem}
-        .tuya-card{min-height:200px}
-        .tuya-actions{min-height:44px}
-        .tuya-measures{min-height:90px}
-        .btn{transition:transform .06s ease}
-        .btn:active{transform:scale(0.98)}
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f6f8; /* Miękkie tło */
+            min-height: 100vh;
+            padding-top: 64px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Usunięto style dark mode */
+
+        /* Ukryj oryginalny sidebar */
+        .flex.min-h-screen > div:first-child { display: none !important; }
+        .flex-1.ml-64 { margin-left: 0 !important; }
+
+        /* --- KALENDARZ --- */
+        .hidden-options { display: none; }
+        .today { background-color: #e0f2fe !important; }
+        .other-month { background-color: #f3f4f6; color: #9ca3af; }
+
+        /* Klasa bazowa dla komórki kalendarza */
+        .calendar-day {
+            aspect-ratio: 1 / 1;
+            padding: 6px;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 0.75rem;
+        }
+
+        /* --- TRYB MAŁY (np. mobilki w widoku 'landscape') --- */
+        @media (max-width: 640px) {
+            .calendar-day {
+                min-height: 80px;
+            }
+            .event-list {
+                display: none;
+            }
+            .event-dots {
+                display: flex;
+                gap: 2px;
+                justify-content: flex-start;
+            }
+        }
+
+        /* --- TRYB DUŻY (desktop i tablety 'portrait') --- */
+        @media (min-width: 641px) {
+            .calendar-day {
+                min-height: 120px;
+                aspect-ratio: auto;
+                overflow: visible;
+                justify-content: flex-start;
+            }
+            .event-list {
+                display: block;
+                max-height: 100px;
+                overflow-y: auto;
+            }
+            .event-dots {
+                display: none;
+            }
+        }
+
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .other-month {
+            visibility: visible;
+            opacity: 0.5;
+        }
+
+        /* Nagłówek Kalendarza */
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
-<body>
+<body class="bg-transparent">
 
 <nav class="fixed top-0 left-0 right-0 h-16 bg-white shadow-md border-b border-gray-100 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex justify-between items-center">
+
         <div class="flex items-center space-x-2 sm:space-x-4">
-            <button type="button" class="view-toggle w-10 h-10 flex items-center justify-center rounded-full text-indigo-600 hover:bg-indigo-50" data-view-target="finance" aria-label="Panel finansowy">
-                <i data-lucide="scale" class="w-6 h-6"></i>
-            </button>
-            <button type="button" class="view-toggle w-10 h-10 flex items-center justify-center rounded-full text-cyan-600 hover:bg-cyan-50" data-view-target="home" aria-label="Sterowanie Domem">
-                <i data-lucide="home" class="w-6 h-6"></i>
-            </button>
-            <span id="nav-title" class="text-xl font-bold text-gray-900 hidden sm:block">Asystent Finansów</span>
+            <i data-lucide="scale" class="w-7 h-7 text-indigo-600"></i>
+            <span class="text-xl font-bold text-gray-900 hidden sm:block">Asystent Finansów</span>
         </div>
 
         <div class="flex items-center space-x-2 sm:space-x-4">
+
             <div class="relative">
-                <select id="personSelect" class="p-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                <select onchange="window.location.href=this.value" class="p-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-indigo-500 focus:border-indigo-500 bg-white">
                     <option value="#" disabled>Wybierz Osobę</option>
                     <option th:each="person : ${people}"
                             th:value="@{'/'(activePersonId=${person.id}, month=${currentMonth})}"
                             th:text="${person.name}"
-                            th:selected="${activePerson != null && person.id == activePerson.id}">
-                        Anna Kowalska
-                    </option>
+                            th:selected="${activePerson != null && person.id == activePerson.id}">Anna Kowalska</option>
                 </select>
             </div>
-            <button id="personGo" class="p-2.5 bg-gray-900 text-white rounded-lg">Przełącz</button>
 
-            <button onclick="toggleAddPersonForm()" class="p-2.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition shadow-md" aria-label="Dodaj nową osobę">
+            <button onclick="toggleAddPersonForm()" class="p-2.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition shadow-md" title="Dodaj nową osobę">
                 <i data-lucide="user-plus" class="w-5 h-5"></i>
             </button>
 
             <a th:if="${activePerson != null}"
                th:href="@{/delete-person(id=${activePerson.id})}"
                onclick="return confirm('Jesteś pewien? Usunięcie osoby skasuje WSZYSTKIE jej transakcje i zadania!');"
-               class="p-2.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition shadow-md" aria-label="Usuń aktywną osobę">
+               class="p-2.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition shadow-md"
+               title="Usuń aktywną osobę">
                 <i data-lucide="user-minus" class="w-5 h-5"></i>
             </a>
         </div>
     </div>
 </nav>
 
-<!-- MODAL: Dodaj Osobę -->
-<div id="addPersonFormContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 hidden justify-center items-center">
-    <form id="addPersonForm" th:action="@{/add-person}" method="POST" class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm">
-        <div class="flex justify-between items-center border-b pb-3 mb-4">
-            <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i> Dodaj Nową Osobę
-            </h3>
-            <button type="button" onclick="toggleAddPersonForm()" class="text-gray-400 hover:text-gray-600" aria-label="Zamknij">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
+<div id="addPersonFormContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
+    <form id="addPersonForm" th:action="@{/add-person}" method="POST" class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm"> <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-5 h-5 text-indigo-600"></i> Dodaj Nową Osobę
+        </h3>
+        <button type="button" onclick="toggleAddPersonForm()" class="text-gray-400 hover:text-gray-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </div>
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Imię</label>
-            <input type="text" name="name" placeholder="Imię osoby..." class="w-full p-3 border border-gray-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" required>
-        </div>
+            <input type="text" name="name" placeholder="Imię osoby..." class="w-full p-3 border border-gray-300 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" required> </div>
         <button type="submit" class="w-full bg-indigo-600 text-white p-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg">Zapisz</button>
     </form>
 </div>
 
-<!-- MODAL: Dodaj Transakcję -->
-<div id="addTransactionModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 hidden justify-center items-center">
+<div id="addTransactionModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
     <div class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-md">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
             <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <i data-lucide="dollar-sign" class="w-5 h-5 text-green-600"></i> Dodaj Transakcję
             </h3>
-            <button type="button" onclick="toggleAddTransactionModal()" class="text-gray-400 hover:text-gray-600" aria-label="Zamknij">
+            <button type="button" onclick="toggleAddTransactionModal()" class="text-gray-400 hover:text-gray-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
@@ -136,14 +200,13 @@
     </div>
 </div>
 
-<!-- MODAL: Dodaj Zadanie -->
-<div id="addTaskModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 hidden justify-center items-center">
+<div id="addTaskModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
     <div class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-md">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
             <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i> Dodaj Zadanie
             </h3>
-            <button type="button" onclick="toggleAddTaskModal()" class="text-gray-400 hover:text-gray-600" aria-label="Zamknij">
+            <button type="button" onclick="toggleAddTaskModal()" class="text-gray-400 hover:text-gray-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
@@ -166,6 +229,7 @@
                     <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500" required>
                 </div>
             </div>
+
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Priorytet</label>
                 <select name="priority" class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500">
@@ -177,64 +241,21 @@
                 </select>
             </div>
 
-            <div id="monthlyOptionsTask" class="mb-4 hidden-options">
-                <label class="text-sm font-medium text-gray-600">Dzień Miesiąca (1-31)</label>
-                <input type="number" min="1" max="31" name="dayOfMonth" value="1" class="w-full p-3 border rounded-lg mt-1">
-            </div>
-            <div id="weeklyOptionsTask" class="mb-4 hidden-options">
-                <label class="text-sm font-medium text-gray-600">W które dni:</label>
-                <div class="grid grid-cols-4 gap-2 mt-2 text-sm">
-                    <div><input type="checkbox" name="onMonday" value="true" id="mon_t"> <label for="mon_t">Pon</label></div>
-                    <div><input type="checkbox" name="onTuesday" value="true" id="tue_t"> <label for="tue_t">Wt</label></div>
-                    <div><input type="checkbox" name="onWednesday" value="true" id="wed_t"> <label for="wed_t">Śr</label></div>
-                    <div><input type="checkbox" name="onThursday" value="true" id="thu_t"> <label for="thu_t">Czw</label></div>
-                    <div><input type="checkbox" name="onFriday" value="true" id="fri_t"> <label for="fri_t">Pt</label></div>
-                    <div><input type="checkbox" name="onSaturday" value="true" id="sat_t"> <label for="sat_t">Sob</label></div>
-                    <div><input type="checkbox" name="onSunday" value="true" id="sun_t"> <label for="sun_t">Niedz</label></div>
-                </div>
-            </div>
-
-            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg mt-4">Zapisz Zadanie</button>
+            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg">Zapisz Zadanie</button>
         </form>
     </div>
 </div>
 
-<!-- HOME (Tuya) -->
-<div id="home-view" class="hidden space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div th:if="${activePerson == null}" class="text-center p-12 bg-white rounded-3xl shadow-xl mt-12">
-        <i data-lucide="home" class="w-12 h-12 text-cyan-400 mx-auto mb-4"></i>
-        <h2 class="text-3xl font-bold text-gray-800">Sterowanie domem</h2>
-        <p class="text-gray-500 mt-3 text-lg">Aby zarządzać urządzeniami, wybierz osobę powiązaną z kontem Tuya.</p>
-    </div>
 
-    <div th:if="${activePerson != null}" class="space-y-6">
-        <div class="flex flex-col gap-2">
-            <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <i data-lucide="home" class="w-7 h-7 text-cyan-600"></i>
-                Sterowanie Domem
-            </h2>
-            <p class="text-gray-600 max-w-2xl">Panel automatyki domowej automatycznie dopasowuje sterowanie do typu urządzenia.</p>
-        </div>
+<div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-            <div id="tuya-loading" class="text-center text-gray-500">Ładowanie urządzeń...</div>
-            <!-- TU: przekazuję activePersonId w data-attr -->
-            <div id="tuya-devices-list"
-                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                 th:attr="data-person-id=${activePerson != null ? activePerson.id : null}"></div>
-        </div>
-    </div>
-</div>
-
-<!-- FINANCE (bez zmian merytorycznych) -->
-<div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="finance-view">
-    <div th:if="${activePerson == null}" class="text-center p-12 bg-white rounded-3xl shadow-xl mt-12">
-        <i data-lucide="sparkles" class="w-12 h-12 text-indigo-400 mx-auto mb-4"></i>
+    <div th:if="${activePerson == null}" class="text-center p-12 bg-white rounded-3xl shadow-xl mt-12"> <i data-lucide="sparkles" class="w-12 h-12 text-indigo-400 mx-auto mb-4"></i>
         <h2 class="text-3xl font-bold text-gray-800">Witaj w Asystencie Finansów!</h2>
         <p class="text-gray-500 mt-3 text-lg">Aby zacząć, dodaj pierwszą osobę za pomocą przycisku "Dodaj Osobę" w górnym pasku.</p>
     </div>
 
     <div th:if="${activePerson != null}">
+
         <div class="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4 border-b pb-4">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center gap-3">
                 <span class="w-5 h-5 rounded-full" th:classappend="${activePerson.color}"></span>
@@ -253,18 +274,16 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Przychody (Zaksięgowane)</p>
-                    <p class="text-2xl font-bold text-green-600" th:text="${#numbers.formatDecimal(monthlyIncome, 1, 2)} + ' PLN'"></p>
-                </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between"> <div>
+                <p class="text-sm font-medium text-gray-500">Przychody (Zaksięgowane)</p>
+                <p class="text-2xl font-bold text-green-600" th:text="${#numbers.formatDecimal(monthlyIncome, 1, 2)} + ' PLN'"></p>
+            </div>
                 <i data-lucide="trending-up" class="w-8 h-8 text-green-500"></i>
             </div>
-            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Wydatki (Zaksięgowane)</p>
-                    <p class="text-2xl font-bold text-red-600" th:text="${#numbers.formatDecimal(monthlyExpenses, 1, 2)} + ' PLN'"></p>
-                </div>
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between"> <div>
+                <p class="text-sm font-medium text-gray-500">Wydatki (Zaksięgowane)</p>
+                <p class="text-2xl font-bold text-red-600" th:text="${#numbers.formatDecimal(monthlyExpenses, 1, 2)} + ' PLN'"></p>
+            </div>
                 <i data-lucide="trending-down" class="w-8 h-8 text-red-500"></i>
             </div>
             <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 flex items-center justify-between" th:classappend="${monthlyBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0 ? 'border-indigo-400' : 'border-orange-400'}">
@@ -313,22 +332,26 @@
             </h2>
             <div class="space-y-2 max-h-80 overflow-y-auto">
                 <div th:each="task : ${openTasks}" class="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-white rounded-lg shadow-sm border border-blue-100 gap-2">
+
                     <div class="text-sm font-medium text-gray-700 flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full flex-shrink-0" th:switch="${task.priority}" th:title="'Priorytet: ' + ${task.priority}">
-              <span th:case="1" class="bg-green-500 w-full h-full rounded-full"></span>
-              <span th:case="2" class="bg-lime-500 w-full h-full rounded-full"></span>
-              <span th:case="3" class="bg-yellow-400 w-full h-full rounded-full"></span>
-              <span th:case="4" class="bg-orange-500 w-full h-full rounded-full"></span>
-              <span th:case="5" class="bg-red-600 w-full h-full rounded-full"></span>
-              <span th:case="*" class="bg-gray-400 w-full h-full rounded-full"></span>
-            </span>
+                            <span class="w-3 h-3 rounded-full flex-shrink-0" th:switch="${task.priority}" th:title="'Priorytet: ' + ${task.priority}">
+                                <span th:case="1" class="bg-green-500 w-full h-full rounded-full"></span>
+                                <span th:case="2" class="bg-lime-500 w-full h-full rounded-full"></span>
+                                <span th:case="3" class="bg-yellow-400 w-full h-full rounded-full"></span>
+                                <span th:case="4" class="bg-orange-500 w-full h-full rounded-full"></span>
+                                <span th:case="5" class="bg-red-600 w-full h-full rounded-full"></span>
+                                <span th:case="*" class="bg-gray-400 w-full h-full rounded-full"></span>
+                            </span>
+
                         <div>
                             <span th:text="${task.description}"></span>
                             <span class="text-xs ml-0 sm:ml-3 block sm:inline"
                                   th:text="'Termin: ' + ${#temporals.format(task.date, 'dd.MM.yyyy')}"
-                                  th:classappend="${task.date.isBefore(T(java.time.LocalDate).now())} ? 'text-red-600 font-bold' : 'text-gray-500'"></span>
+                                  th:classappend="${task.date.isBefore(T(java.time.LocalDate).now())} ? 'text-red-600 font-bold' : 'text-gray-500'">
+                                </span>
                         </div>
                     </div>
+
                     <div class="flex items-center space-x-3">
                         <a th:href="@{'/toggle-completed'(id=${task.id}, month=${currentMonth})}"
                            class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">
@@ -339,7 +362,6 @@
             </div>
         </div>
 
-        <!-- KALENDARZ -->
         <div id="calendarContainer" class="w-full transition-all duration-500">
             <div class="bg-white rounded-2xl shadow-lg p-4 mb-10 border border-gray-200">
                 <div class="flex justify-between items-center mb-3">
@@ -360,9 +382,11 @@
                              th:data-person-id="${activePerson.id}"
                              th:data-date="${day.date}"
                              th:data-day="${day.date.dayOfMonth}">
+
                             <div class="font-bold text-right text-xs w-full flex justify-between items-start"
                                  th:classappend="${day.isToday ? 'text-indigo-700' : 'text-gray-700'}">
                                 <div th:text="${day.getDayOfMonth()}">15</div>
+
                                 <div class="event-dots">
                                     <div th:if="${!day.getUnpaidExpenses().isEmpty()}" class="event-dot bg-red-700" title="Do zapłaty"></div>
                                     <div th:if="${!day.getTasks().isEmpty()}" class="event-dot bg-blue-700" title="Zadania"></div>
@@ -379,13 +403,13 @@
                                 <div th:each="task : ${day.getTasks()}" class="bg-blue-50 text-blue-700 p-1 rounded-md border border-blue-200 truncate flex items-center gap-1.5">
                                     <i data-lucide="list-checks" class="w-3 h-3 inline-block flex-shrink-0"></i>
                                     <span class="w-2 h-2 rounded-full flex-shrink-0" th:switch="${task.priority}">
-                    <span th:case="1" class="bg-green-500 w-full h-full rounded-full"></span>
-                    <span th:case="2" class="bg-lime-500 w-full h-full rounded-full"></span>
-                    <span th:case="3" class="bg-yellow-400 w-full h-full rounded-full"></span>
-                    <span th:case="4" class="bg-orange-500 w-full h-full rounded-full"></span>
-                    <span th:case="5" class="bg-red-600 w-full h-full rounded-full"></span>
-                    <span th:case="*" class="bg-gray-400 w-full h-full rounded-full"></span>
-                  </span>
+                                            <span th:case="1" class="bg-green-500 w-full h-full rounded-full"></span>
+                                            <span th:case="2" class="bg-lime-500 w-full h-full rounded-full"></span>
+                                            <span th:case="3" class="bg-yellow-400 w-full h-full rounded-full"></span>
+                                            <span th:case="4" class="bg-orange-500 w-full h-full rounded-full"></span>
+                                            <span th:case="5" class="bg-red-600 w-full h-full rounded-full"></span>
+                                            <span th:case="*" class="bg-gray-400 w-full h-full rounded-full"></span>
+                                        </span>
                                     <span class="truncate" th:classappend="${task.completed} ? 'line-through text-gray-500' : 'font-medium'" th:text="${task.description}"></span>
                                 </div>
 
@@ -396,64 +420,153 @@
                                     <i data-lucide="circle-dot" class="w-3 h-3 inline-block"></i> <span th:text="${payment.description}"></span>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- REGUŁY (jak wcześniej) -->
-        <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
-            <i data-lucide="settings" class="w-7 h-7 text-purple-600"></i> Zarządzanie Regułami
-        </h2>
+        <div th:if="${activePerson != null}" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
+                <i data-lucide="home" class="w-7 h-7 text-cyan-600"></i> Sterowanie Domem
+            </h2>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-                <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Stałą Transakcję</h3>
-                <form th:action="@{/add-recurring-transaction}" method="POST">
-                    <input type="hidden" name="personId" th:value="${activePerson.id}">
-                    <div class="mb-4">
-                        <label class="text-sm font-medium text-gray-600">Opis</label>
-                        <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="text-sm font-medium text-gray-600">Kwota (PLN)</label>
-                            <input type="number" step="0.01" name="amount" class="w-full p-3 border rounded-lg mt-1" required>
+                <div id="tuya-loading" class="text-center text-gray-500">Ładowanie urządzeń...</div>
+                <div id="tuya-devices-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${activePerson != null}" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2 flex items-center gap-3">
+                <i data-lucide="settings" class="w-7 h-7 text-purple-600"></i> Zarządzanie Regułami
+            </h2>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Stałą Transakcję</h3>
+                    <form th:action="@{/add-recurring-transaction}" method="POST">
+                        <input type="hidden" name="personId" th:value="${activePerson.id}">
+                        <div class="mb-4">
+                            <label class="text-sm font-medium text-gray-600">Opis</label>
+                            <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Kwota (PLN)</label>
+                                <input type="number" step="0.01" name="amount" class="w-full p-3 border rounded-lg mt-1" required>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Typ</label>
+                                <select name="type" class="w-full p-3 border rounded-lg mt-1">
+                                    <option value="INCOME">Przychód</option>
+                                    <option value="EXPENSE">Wydatek</option>
+                                </select>
+                            </div>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-gray-600">Typ</label>
-                            <select name="type" class="w-full p-3 border rounded-lg mt-1">
-                                <option value="INCOME">Przychód</option>
-                                <option value="EXPENSE">Wydatek</option>
+                            <label class="text-sm font-medium text-gray-600">Dzień Miesiąca Transakcji (1-31)</label>
+                            <input type="number" min="1" max="31" name="dayOfMonthToGenerate" value="1" class="w-full p-3 border rounded-lg mt-1" required>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-600">Opóźnienie Terminu Płatności (w dniach)</label>
+                            <input type="number" min="0" name="daysUntilDue" value="0" class="w-full p-3 border rounded-lg mt-1" required>
+                            <p class="text-xs text-gray-500 mt-1">0 = termin tego samego dnia</p>
+                        </div>
+                        <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Stałą Transakcję</button> </form>
+                    <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Transakcji</h4>
+                    <div class="max-h-[300px] overflow-y-auto">
+                        <div th:if="${recurringTransactions.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych stałych transakcji.</div>
+                        <div th:each="rt : ${recurringTransactions}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
+                            <div>
+                                <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
+                                <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonthToGenerate} + ' dnia | Termin: +' + ${rt.daysUntilDue} + ' dni'"></div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="font-bold" th:classappend="${rt.type == T(com.example.finansow.model.TransactionType).INCOME} ? 'text-green-600' : 'text-red-600'"
+                                     th:text="${(rt.type == T(com.example.finansow.model.TransactionType).INCOME ? '+' : '-') + #numbers.formatDecimal(rt.amount, 1, 2)} + ' PLN'">
+                                </div>
+                                <a th:href="@{'/delete-recurring-transaction'(id=${rt.id}, personId=${activePerson.id})}"
+                                   class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
+                                    <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200"> <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Cykliczne Zadanie</h3>
+                    <form th:action="@{/add-recurring-task}" method="POST" onchange="toggleTaskOptions()">
+                        <input type="hidden" name="assignerId" th:value="${activePerson.id}">
+                        <div class="mb-4">
+                            <label class="text-sm font-medium text-gray-600">Opis zadania</label>
+                            <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Dla kogo (Wykonawca)</label>
+                                <select name="assigneeId" class="w-full p-3 border rounded-lg mt-1">
+                                    <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Powtarzaj</label>
+                                <select name="recurrenceType" id="recurrenceType" class="w-full p-3 border rounded-lg mt-1">
+                                    <option th:value="${T(com.example.finansow.model.RecurrenceType).DAILY}">Codziennie</option>
+                                    <option th:value="${T(com.example.finansow.model.RecurrenceType).WEEKLY}">Co tydzień</option>
+                                    <option th:value="${T(com.example.finansow.model.RecurrenceType).MONTHLY}">Co miesiąc</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="text-sm font-medium text-gray-600">Priorytet</label>
+                            <select name="priority" class="w-full p-3 border rounded-lg mt-1">
+                                <option value="1">1 (Mało ważny)</option>
+                                <option value="2">2 (Niski)</option>
+                                <option value="3" selected>3 (Normalny)</option>
+                                <option value="4">4 (Ważny)</option>
+                                <option value="5">5 (Super ważny)</option>
                             </select>
                         </div>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium text-gray-600">Dzień Miesiąca Transakcji (1-31)</label>
-                        <input type="number" min="1" max="31" name="dayOfMonthToGenerate" value="1" class="w-full p-3 border rounded-lg mt-1" required>
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium text-gray-600">Opóźnienie Terminu Płatności (w dniach)</label>
-                        <input type="number" min="0" name="daysUntilDue" value="0" class="w-full p-3 border rounded-lg mt-1" required>
-                        <p class="text-xs text-gray-500 mt-1">0 = termin tego samego dnia</p>
-                    </div>
-                    <button type="submit" class="w-full bg-teal-600 text-white p-3 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg">Zapisz Stałą Transakcję</button>
-                </form>
 
-                <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Transakcji</h4>
-                <div class="max-h-[300px] overflow-y-auto">
-                    <div th:if="${recurringTransactions.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych stałych transakcji.</div>
-                    <div th:each="rt : ${recurringTransactions}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
-                        <div>
-                            <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
-                            <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonthToGenerate} + ' dnia | Termin: +' + ${rt.daysUntilDue} + ' dni'"></div>
+                        <div id="monthlyOptions" class="mb-4 hidden-options">
+                            <label class="text-sm font-medium text-gray-600">Dzień Miesiąca (1-31)</label>
+                            <input type="number" min="1" max="31" name="dayOfMonth" value="1" class="w-full p-3 border rounded-lg mt-1">
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="font-bold" th:classappend="${rt.type == T(com.example.finansow.model.TransactionType).INCOME} ? 'text-green-600' : 'text-red-600'"
-                                 th:text="${(rt.type == T(com.example.finansow.model.TransactionType).INCOME ? '+' : '-') + #numbers.formatDecimal(rt.amount, 1, 2)} + ' PLN'"></div>
-                            <a th:href="@{'/delete-recurring-transaction'(id=${rt.id}, personId=${activePerson.id})}"
+                        <div id="weeklyOptions" class="mb-4 hidden-options">
+                            <label class="text-sm font-medium text-gray-600">W które dni:</label>
+                            <div class="grid grid-cols-4 gap-2 mt-2 text-sm">
+                                <div><input type="checkbox" name="onMonday" value="true" id="mon"> <label for="mon">Pon</label></div>
+                                <div><input type="checkbox" name="onTuesday" value="true" id="tue"> <label for="tue">Wt</label></div>
+                                <div><input type="checkbox" name="onWednesday" value="true" id="wed"> <label for="wed">Śr</label></div>
+                                <div><input type="checkbox" name="onThursday" value="true" id="thu"> <label for="thu">Czw</label></div>
+                                <div><input type="checkbox" name="onFriday" value="true" id="fri"> <label for="fri">Pt</label></div>
+                                <div><input type="checkbox" name="onSaturday" value="true" id="sat"> <label for="sat">Sob</label></div>
+                                <div><input type="checkbox" name="onSunday" value="true" id="sun"> <label for="sun">Niedz</label></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-purple-600 text-white p-3 rounded-xl font-semibold hover:bg-purple-700 transition shadow-lg mt-4">Zapisz Cykliczne Zadanie</button>
+                    </form>
+                    <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Zadań</h4>
+                    <div class="max-h-[300px] overflow-y-auto">
+                        <div th:if="${recurringTasks.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych cyklicznych zadań.</div>
+                        <div th:each="rt : ${recurringTasks}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
+                            <div class="flex items-center gap-2">
+                                        <span class="w-3 h-3 rounded-full flex-shrink-0" th:switch="${rt.priority}" th:title="'Priorytet: ' + ${rt.priority}">
+                                            <span th:case="1" class="bg-green-500 w-full h-full rounded-full"></span>
+                                            <span th:case="2" class="bg-lime-500 w-full h-full rounded-full"></span>
+                                            <span th:case="3" class="bg-yellow-400 w-full h-full rounded-full"></span>
+                                            <span th:case="4" class="bg-orange-500 w-full h-full rounded-full"></span>
+                                            <span th:case="5" class="bg-red-600 w-full h-full rounded-full"></span>
+                                            <span th:case="*" class="bg-gray-400 w-full h-full rounded-full"></span>
+                                        </span>
+                                <div>
+                                    <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
+                                    <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonth} + ' dnia | Powtarza: ' + ${rt.recurrenceType.toString()}"></div>
+                                </div>
+                            </div>
+                            <a th:href="@{'/delete-recurring-task'(id=${rt.id}, personId=${activePerson.id})}"
                                class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
                                 <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
                             </a>
@@ -462,185 +575,132 @@
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-                <h3 class="text-xl font-bold text-gray-800 mb-5">Dodaj Cykliczne Zadanie</h3>
-                <form th:action="@{/add-recurring-task}" method="POST" onchange="toggleTaskOptions('rec')">
-                    <input type="hidden" name="assignerId" th:value="${activePerson.id}">
-                    <div class="mb-4">
-                        <label class="text-sm font-medium text-gray-600">Opis zadania</label>
-                        <input type="text" name="description" class="w-full p-3 border rounded-lg mt-1" required>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="text-sm font-medium text-gray-600">Dla kogo (Wykonawca)</label>
-                            <select name="assigneeId" class="w-full p-3 border rounded-lg mt-1">
-                                <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == activePerson.id}"></option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-600">Powtarzaj</label>
-                            <select name="recurrenceType" id="recurrenceType" class="w-full p-3 border rounded-lg mt-1">
-                                <option th:value="${T(com.example.finansow.model.RecurrenceType).DAILY}">Codziennie</option>
-                                <option th:value="${T(com.example.finansow.model.RecurrenceType).WEEKLY}">Co tydzień</option>
-                                <option th:value="${T(com.example.finansow.model.RecurrenceType).MONTHLY}">Co miesiąc</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="text-sm font-medium text-gray-600">Priorytet</label>
-                        <select name="priority" class="w-full p-3 border rounded-lg mt-1">
-                            <option value="1">1 (Mało ważny)</option>
-                            <option value="2">2 (Niski)</option>
-                            <option value="3" selected>3 (Normalny)</option>
-                            <option value="4">4 (Ważny)</option>
-                            <option value="5">5 (Super ważny)</option>
-                        </select>
-                    </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-2 mt-10 flex items-center gap-3">
+                <i data-lucide="file-text" class="w-6 h-6 text-yellow-600"></i> Dane i Raporty
+            </h2>
 
-                    <div id="monthlyOptionsRec" class="mb-4 hidden-options">
-                        <label class="text-sm font-medium text-gray-600">Dzień Miesiąca (1-31)</label>
-                        <input type="number" min="1" max="31" name="dayOfMonth" value="1" class="w-full p-3 border rounded-lg mt-1">
-                    </div>
-                    <div id="weeklyOptionsRec" class="mb-4 hidden-options">
-                        <label class="text-sm font-medium text-gray-600">W które dni:</label>
-                        <div class="grid grid-cols-4 gap-2 mt-2 text-sm">
-                            <div><input type="checkbox" name="onMonday" value="true" id="mon_r"> <label for="mon_r">Pon</label></div>
-                            <div><input type="checkbox" name="onTuesday" value="true" id="tue_r"> <label for="tue_r">Wt</label></div>
-                            <div><input type="checkbox" name="onWednesday" value="true" id="wed_r"> <label for="wed_r">Śr</label></div>
-                            <div><input type="checkbox" name="onThursday" value="true" id="thu_r"> <label for="thu_r">Czw</label></div>
-                            <div><input type="checkbox" name="onFriday" value="true" id="fri_r"> <label for="fri_r">Pt</label></div>
-                            <div><input type="checkbox" name="onSaturday" value="true" id="sat_r"> <label for="sat_r">Sob</label></div>
-                            <div><input type="checkbox" name="onSunday" value="true" id="sun_r"> <label for="sun_r">Niedz</label></div>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full bg-purple-600 text-white p-3 rounded-xl font-semibold hover:bg-purple-700 transition shadow-lg mt-4">Zapisz Cykliczne Zadanie</button>
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 mb-8 flex flex-col md:flex-row md:items-center gap-4">
+                <a th:href="@{'/report-monthly'(personId=${activePerson.id}, month=${currentMonth})}"
+                   class="w-full md:w-auto text-center p-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2">
+                    Pobierz Raport Miesięczny
+                </a>
+                <a th:href="@{'/report-yearly'(personId=${activePerson.id}, year=${T(java.time.YearMonth).parse(currentMonth).getYear()})}"
+                   class="w-full md:w-auto text-center p-3 bg-gray-600 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition shadow-md flex items-center justify-center gap-2">
+                    Pobierz Raport Roczny
+                </a>
+                <form th:action="@{/archive-data}" method="post" onsubmit="return confirm('Czy na pewno chcesz usunąć wszystkie zakończone zadania i transakcje starsze niż 6 miesięcy? Tej operacji nie można cofnąć.');" class="w-full md:w-auto">
+                    <input type="hidden" name="personId" th:value="${activePerson.id}">
+                    <button type="submit" class="w-full md:w-auto p-3 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition shadow-md flex items-center justify-center gap-2">
+                        <i data-lucide="archive" class="w-5 h-5"></i> Archiwizuj Stare Dane
+                    </button>
                 </form>
-
-                <h4 class="text-lg font-bold text-gray-700 mt-8 mb-3 border-b pb-2">Zapisane Reguły Zadań</h4>
-                <div class="max-h-[300px] overflow-y-auto">
-                    <div th:if="${recurringTasks.isEmpty()}" class="text-gray-500 text-center p-4 text-sm">Brak zapisanych cyklicznych zadań.</div>
-                    <div th:each="rt : ${recurringTasks}" class="p-3 border-b last:border-b-0 flex justify-between items-center text-sm bg-gray-50 rounded-lg mt-2">
-                        <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full flex-shrink-0" th:switch="${rt.priority}" th:title="'Priorytet: ' + ${rt.priority}">
-                <span th:case="1" class="bg-green-500 w-full h-full rounded-full"></span>
-                <span th:case="2" class="bg-lime-500 w-full h-full rounded-full"></span>
-                <span th:case="3" class="bg-yellow-400 w-full h-full rounded-full"></span>
-                <span th:case="4" class="bg-orange-500 w-full h-full rounded-full"></span>
-                <span th:case="5" class="bg-red-600 w-full h-full rounded-full"></span>
-                <span th:case="*" class="bg-gray-400 w-full h-full rounded-full"></span>
-              </span>
-                            <div>
-                                <div class="font-medium text-gray-800" th:text="${rt.description}"></div>
-                                <div class="text-xs text-gray-500 mt-1" th:text="'Generuj: ' + ${rt.dayOfMonth} + ' dnia | Powtarza: ' + ${rt.recurrenceType.toString()}"></div>
-                            </div>
-                        </div>
-                        <a th:href="@{'/delete-recurring-task'(id=${rt.id}, personId=${activePerson.id})}"
-                           class="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition">
-                            <i data-lucide="trash-2" class="w-3 h-3 inline-block mr-1"></i> Usuń
-                        </a>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-2 mt-10 flex items-center gap-3">
-            <i data-lucide="file-text" class="w-6 h-6 text-yellow-600"></i> Dane i Raporty
-        </h2>
 
-        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 mb-8 flex flex-col md:flex-row md:items-center gap-4">
-            <a th:href="@{'/report-monthly'(personId=${activePerson.id}, month=${currentMonth})}"
-               class="w-full md:w-auto text-center p-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2">
-                Pobierz Raport Miesięczny
-            </a>
-            <a th:href="@{'/report-yearly'(personId=${activePerson.id}, year=${T(java.time.YearMonth).parse(currentMonth).getYear()})}"
-               class="w-full md:w-auto text-center p-3 bg-gray-600 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition shadow-md flex items-center justify-center gap-2">
-                Pobierz Raport Roczny
-            </a>
-            <form th:action="@{/archive-data}" method="post" onsubmit="return confirm('Czy na pewno chcesz usunąć wszystkie zakończone zadania i transakcje starsze niż 6 miesięcy? Tej operacji nie można cofnąć.');" class="w-full md:w-auto">
-                <input type="hidden" name="personId" th:value="${activePerson.id}">
-                <button type="submit" class="w-full md:w-auto p-3 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition shadow-md flex items-center justify-center gap-2">
-                    <i data-lucide="archive" class="w-5 h-5"></i> Archiwizuj Stare Dane
-                </button>
-            </form>
-        </div>
     </div>
 </div>
 
-<!-- MODAL: Szczegóły dnia -->
-<div id="dayDetailsModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 hidden justify-center items-center">
+<div id="dayDetailsModalContainer" class="fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center hidden">
     <div id="dayDetailsModal" class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
             <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <i data-lucide="info" class="w-5 h-5 text-teal-600"></i> Szczegóły Dnia <span id="modalDateDisplay" class="text-teal-600 ml-2"></span>
-            </h3>
-            <button type="button" onclick="hideDayDetails()" class="text-gray-400 hover:text-gray-600" aria-label="Zamknij">
+                <i data-lucide="info" class="w-5 h-5 text-teal-600"></i> Szczegóły Dnia <span id="modalDateDisplay" class="text-teal-600 ml-2"></span> </h3>
+            <button type="button" onclick="hideDayDetails()" class="text-gray-400 hover:text-gray-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
-        <div id="modalEventList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+        <div id="modalEventList" class="space-y-3 max-h-96 overflow-y-auto">
+        </div>
         <div id="modalLoading" class="text-center py-4 hidden">Ładowanie...</div>
     </div>
 </div>
 
 <div th:if="${activePerson != null}" class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
     <div id="fabMenu" class="hidden flex flex-col items-end gap-3">
-        <button onclick="toggleAddTaskModal()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 transition" aria-label="Dodaj Zadanie">
+        <button onclick="toggleAddTaskModal()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 transition" title="Dodaj Zadanie">
             <span class="text-sm font-medium hidden sm:block">Zadanie</span>
             <i data-lucide="list-checks" class="w-5 h-5"></i>
         </button>
-        <button onclick="toggleAddTransactionModal()" class="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-teal-700 transition" aria-label="Dodaj Transakcję">
+        <button onclick="toggleAddTransactionModal()" class="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-teal-700 transition" title="Dodaj Transakcję">
             <span class="text-sm font-medium hidden sm:block">Transakcja</span>
             <i data-lucide="dollar-sign" class="w-5 h-5"></i>
         </button>
     </div>
-    <button onclick="toggleFabMenu()" class="p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 transition" aria-label="Menu główne">
+    <button onclick="toggleFabMenu()" class="p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 transition">
         <i data-lucide="plus" class="w-7 h-7"></i>
     </button>
 </div>
 
-<script src="/tuya-refresh.js"></script>
 
 <script th:inline="javascript">
+    // Aktywacja ikon Lucide
     lucide.createIcons();
 
-    const $ = (s)=>document.querySelector(s);
-    const $$ = (s)=>Array.from(document.querySelectorAll(s));
+    // --- ZAKTUALIZOWANA LOGIKA MODALI ---
 
-    $('#personGo')?.addEventListener('click', ()=>{ const href=$('#personSelect')?.value; if(href && href!=='#') window.location.href=href; });
-
-    function toggleAddPersonForm(){ $('#addPersonFormContainer').classList.toggle('hidden'); }
-    function toggleAddTransactionModal(){ const el=$('#addTransactionModalContainer'); if(!el) return; el.classList.toggle('hidden'); $('#fabMenu')?.classList.add('hidden'); }
-    function toggleAddTaskModal(){ const el=$('#addTaskModalContainer'); if(!el) return; el.classList.toggle('hidden'); $('#fabMenu')?.classList.add('hidden'); }
-    function toggleFabMenu(){ $('#fabMenu')?.classList.toggle('hidden'); lucide.createIcons(); }
-    function hideDayDetails(){ $('#dayDetailsModalContainer').style.display='none'; }
-
-    function toggleTaskOptions(scope){
-        const type = (scope==='rec' ? $('#recurrenceType')?.value : null);
-        const monthly = scope==='rec' ? $('#monthlyOptionsRec') : $('#monthlyOptionsTask');
-        const weekly  = scope==='rec' ? $('#weeklyOptionsRec')  : $('#weeklyOptionsTask');
-        if(scope==='rec'){
-            if(monthly) monthly.style.display = (type==='MONTHLY') ? 'block' : 'none';
-            if(weekly) weekly.style.display   = (type==='WEEKLY')  ? 'block' : 'none';
-        }else{
-            if(monthly) monthly.style.display='none';
-            if(weekly) weekly.style.display='none';
-        }
+    // Modal: Dodaj Osobę
+    function toggleAddPersonForm() {
+        var container = document.getElementById('addPersonFormContainer');
+        container.classList.toggle('hidden');
+        container.style.display = container.classList.contains('hidden') ? 'none' : 'flex';
     }
 
-    $('#calendarGridWrapper')?.addEventListener('click', function(e){
+    // Modal: Dodaj Transakcję
+    function toggleAddTransactionModal() {
+        var container = document.getElementById('addTransactionModalContainer');
+        container.classList.toggle('hidden');
+        container.style.display = container.classList.contains('hidden') ? 'none' : 'flex';
+        document.getElementById('fabMenu').classList.add('hidden');
+    }
+
+    // Modal: Dodaj Zadanie
+    function toggleAddTaskModal() {
+        var container = document.getElementById('addTaskModalContainer');
+        container.classList.toggle('hidden');
+        container.style.display = container.classList.contains('hidden') ? 'none' : 'flex';
+        document.getElementById('fabMenu').classList.add('hidden');
+    }
+
+    // Przełączanie menu FAB
+    function toggleFabMenu() {
+        var menu = document.getElementById('fabMenu');
+        menu.classList.toggle('hidden');
+        lucide.createIcons();
+    }
+
+    // Modal: Szczegóły Dnia
+    function hideDayDetails() {
+        const modalContainer = document.getElementById('dayDetailsModalContainer');
+        modalContainer.style.display = 'none';
+    }
+
+    // Funkcja do reguł (bez zmian)
+    function toggleTaskOptions() {
+        const type = document.getElementById('recurrenceType')?.value;
+        const monthly = document.getElementById('monthlyOptions');
+        const weekly = document.getElementById('weeklyOptions');
+        if (monthly) monthly.style.display = type === 'MONTHLY' ? 'block' : 'none';
+        if (weekly) weekly.style.display = type === 'WEEKLY' ? 'block' : 'none';
+    }
+
+    // --- LOGIKA MODALA SZCZEGÓŁÓW DNIA (bez zmian) ---
+    document.getElementById('calendarGridWrapper').addEventListener('click', function(e) {
         const day = e.target.closest('.calendar-day');
         if (!day || day.classList.contains('other-month')) return;
         const personId = day.dataset.personId;
         const dateString = day.dataset.date;
         const dayOfMonth = day.dataset.day;
-        if (personId && dateString && dayOfMonth) showDayDetails(personId, dateString, dayOfMonth);
+        if (personId && dateString && dayOfMonth) {
+            showDayDetails(personId, dateString, dayOfMonth);
+        }
     });
 
-    async function showDayDetails(personId, dateString, dayOfMonth){
-        const modalContainer = $('#dayDetailsModalContainer');
-        const eventList = $('#modalEventList');
-        const dateDisplay = $('#modalDateDisplay');
-        const loading = $('#modalLoading');
+    async function showDayDetails(personId, dateString, dayOfMonth) {
+        const modalContainer = document.getElementById('dayDetailsModalContainer');
+        const eventList = document.getElementById('modalEventList');
+        const dateDisplay = document.getElementById('modalDateDisplay');
+        const loading = document.getElementById('modalLoading');
 
         modalContainer.classList.remove('hidden');
         modalContainer.style.display = 'flex';
@@ -649,259 +709,198 @@
 
         dateDisplay.textContent = `${dayOfMonth}. ${new Date(dateString).toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' })}`;
 
-        try{
-            const resp = await fetch(`/day-events?personId=${personId}&date=${dateString}`);
-            const events = await resp.json();
+        try {
+            const response = await fetch(`/day-events?personId=${personId}&date=${dateString}`);
+            const events = await response.json();
+
             loading.classList.add('hidden');
 
-            if(!events.length){
+            if (events.length === 0) {
                 eventList.innerHTML = '<p class="text-center text-gray-500 py-4">Brak wydarzeń zaplanowanych na ten dzień.</p>';
                 return;
             }
 
-            events.forEach(event=>{
-                const iconMap = { 'WYDATEK':'alert-triangle','ZADANIE':'list-checks','STAŁA PŁATNOŚĆ':'repeat','WPŁYW':'trending-up','STAŁE ZADANIE':'repeat' };
+            events.forEach(event => {
+                const iconMap = { 'WYDATEK': 'alert-triangle', 'ZADANIE': 'list-checks', 'STAŁA PŁATNOŚĆ': 'repeat', 'WPŁYW': 'trending-up', 'STAŁE ZADANIE': 'repeat' };
                 const icon = iconMap[event.type] || 'info';
-                let actionHtml='', actionText='', actionClass='';
-                if(event.actionUrl){
+                let actionHtml = '';
+                let actionText = '';
+                let actionClass = '';
+
+                if (event.actionUrl) {
                     const isCompleted = event.details.includes("Ukończone") || event.details.includes("Opłacono/Odebrano");
-                    if(event.type==='WYDATEK'){ actionText = isCompleted ? 'Anuluj Opłatę' : 'Oznacz jako opłacone'; actionClass = isCompleted ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'; }
-                    else if(event.type==='ZADANIE'){ actionText = isCompleted ? 'Anuluj ukończenie' : 'Ukończ'; actionClass = isCompleted ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'; }
+
+                    if (event.type === 'WYDATEK') {
+                        actionText = isCompleted ? 'Anuluj Opłatę' : 'Oznacz jako opłacone';
+                        actionClass = isCompleted ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200';
+                    } else if (event.type === 'ZADANIE') {
+                        actionText = isCompleted ? 'Anuluj ukończenie' : 'Ukończ';
+                        actionClass = isCompleted ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200';
+                    }
+
                     actionHtml = `<a href="${event.actionUrl}" class="ml-auto text-xs font-medium px-2 py-1 rounded-full transition ${actionClass}">${actionText}</a>`;
                 }
-                const wrapper=document.createElement('div');
-                wrapper.innerHTML=`
-          <div class="p-3 border border-gray-100 rounded-xl flex justify-between items-center bg-white shadow-sm">
-            <div class="flex items-center gap-3">
-              <i data-lucide="${icon}" class="w-4 h-4 ${event.colorClass}"></i>
-              <div>
-                <div class="text-sm font-semibold text-gray-800"></div>
-                <div class="text-xs text-gray-500">${event.type}</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-bold ${event.colorClass}">${event.details}</span>
-              ${actionHtml}
-            </div>
-          </div>`;
-                wrapper.querySelector('.text-sm.font-semibold').textContent = event.description;
-                eventList.appendChild(wrapper.firstElementChild);
+
+                const eventHtml = `
+                        <div class="p-3 border border-gray-100 rounded-xl flex justify-between items-center bg-white shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="${icon}" class="w-4 h-4 ${event.colorClass}"></i>
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-800" >${event.description}</div>
+                                    <div class="text-xs text-gray-500">${event.type}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-bold ${event.colorClass}">${event.details}</span>
+                                ${actionHtml}
+                            </div>
+                        </div>
+                    `;
+                eventList.insertAdjacentHTML('beforeend', eventHtml);
             });
             lucide.createIcons();
-        }catch(e){
+
+        } catch (error) {
+            console.error('Błąd pobierania danych:', error);
             loading.classList.add('hidden');
             eventList.innerHTML = '<p class="text-center text-red-500 py-4">Wystąpił błąd podczas ładowania wydarzeń.</p>';
         }
     }
 
-    // ===================== TUYA =====================
-    const READABLE_CODES = new Set([
-        'switch','switch_1','switch_2','switch_3','switch_usb',
-        'manual_feed',
-        'va_temperature','temp_current','temp_value',
-        'va_humidity','humidity_value',
-        'battery_percentage','cur_power','cur_current','cur_voltage','add_ele','countdown_1'
-    ]);
-    const NAME_MAP = {
-        'va_temperature':'Temperatura','temp_current':'Temperatura','temp_value':'Temperatura',
-        'va_humidity':'Wilgotność','humidity_value':'Wilgotność',
-        'battery_percentage':'Bateria',
-        'cur_power':'Moc','cur_current':'Prąd','cur_voltage':'Napięcie',
-        'add_ele':'Zużycie energii','countdown_1':'Timer',
-        'switch':'Główny','switch_1':'Kanał 1','switch_2':'Kanał 2','switch_3':'Kanał 3','switch_usb':'USB'
-    };
-    function niceName(code){ if(NAME_MAP[code]) return NAME_MAP[code]; if(code.startsWith('switch_')) return 'Kanał '+code.split('_')[1]; return code.split('_').map(s=>s[0].toUpperCase()+s.slice(1)).join(' '); }
-    function normValue(code,val){
-        if(val===null||val===undefined) return '—';
-        if(typeof val==='number'){
-            if(code.includes('temp')){ const n=Math.abs(val)>100?val/10:val; return n.toFixed(1)+'°C'; }
-            if(code.includes('humidity')){ const n=val>100?val/10:val; return Math.round(n)+'%'; }
-            if(code.includes('battery')) return Math.round(val)+'%';
-            if(code.includes('current') && !code.includes('percentage')) return `${(val/1000).toFixed(3)} A`.replace('.',',');
-            if(code.includes('power') && !code.includes('percentage')) return `${(val/1).toFixed(0)} W`;
-            if(code.includes('voltage')) return `${(val/1).toFixed(0)} V`;
-            if(code.includes('add_ele')) return `${Number(val).toFixed(2)} kWh`.replace('.',',');
-            return new Intl.NumberFormat('pl-PL',{maximumFractionDigits:2}).format(val);
-        }
-        if(typeof val==='boolean') return val?'Włączone':'Wyłączone';
-        return String(val);
-    }
-    function deviceIdOf(d){ return d?.id || d?.deviceId || d?.device_id || d?.uuid || d?.devId || ''; }
+    // ===========================================
+    // === POPRAWIONA LOGIKA: Sterowanie TUYA ===
+    // ===========================================
 
-    function renderDeviceCard(device){
-        const id=deviceIdOf(device);
-        const name=device.name||'Urządzenie';
-        const product=device.productName||device.product_name||'';
-        const statuses=Array.isArray(device.status ?? device.status_list ?? device.result) ? (device.status ?? device.status_list ?? device.result) : [];
-        const bools=statuses.filter(s=>typeof s?.value==='boolean' && READABLE_CODES.has(s.code));
-        const measures=statuses.filter(s=>s && s.value!==null && s.value!==undefined && typeof s.value!=='boolean' && READABLE_CODES.has(s.code));
+    function loadTuyaDevices() {
+        const listContainer = document.getElementById('tuya-devices-list');
+        const loadingDiv = document.getElementById('tuya-loading');
+        if (!listContainer) return;
 
-        const actions = bools.map(st=>{
-            const on=!!st.value;
-            const label=on?'Wyłącz':'Włącz';
-            return `<button class="btn px-4 py-2 rounded-full text-sm font-semibold ${on?'bg-indigo-600 text-white':'bg-gray-100 text-gray-700'}"
-              data-code="${st.code}" data-next="${!on}" data-id="${id}" onclick="sendTuyaCommand(event)">${label}${bools.length>1?(' – '+niceName(st.code)) : ''}</button>`;
-        }).join('') || '<div class="text-sm text-gray-400">Brak akcji</div>';
+        fetch('/api/tuya/devices')
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                listContainer.innerHTML = '';
 
-        const meas = measures.map(st=>`
-      <div class="flex items-center justify-between text-sm text-gray-600 py-1 border-b border-gray-100 last:border-b-0">
-        <span>${niceName(st.code)}</span>
-        <span class="font-semibold text-gray-800">${normValue(st.code, st.value)}</span>
-      </div>`).join('');
+                // === POPRAWKA #1: Czytamy teraz 'data.result' (lista) ===
+                if (data.result && data.result.length > 0) {
 
-        return `
-      <div class="tuya-card p-5 rounded-2xl border border-gray-200 bg-white shadow-sm" id="dev-${id}">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="font-semibold text-gray-900">${name}</p>
-            ${product?`<p class="text-xs text-gray-500">${product}</p>`:''}
-          </div>
-          <span class="inline-flex px-2 py-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide bg-gray-100 rounded-full">Urządzenie</span>
-        </div>
-        <div class="tuya-actions flex flex-wrap gap-2 mt-4">${actions}</div>
-        ${meas ? `<div class="tuya-measures mt-4 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1">${meas}</div>` : ''}
-      </div>`;
-    }
+                    data.result.forEach(device => {
+                        // === POPRAWKA #2: 'isOnline' jest teraz POPRAWNE (z v1.0) ===
+                        let isOnline = device.online;
+                        let isOn = false;
+                        let switchCode = 'switch_1'; // Domyślne dla gniazdek
 
-    function activePersonId(){
-        return document.getElementById('tuya-devices-list')?.dataset.personId || null;
-    }
-
-    async function loadTuyaDevices(){
-        const list=$('#tuya-devices-list');
-        const loading=$('#tuya-loading');
-        if(!list) return;
-        loading.style.display='block';
-        list.innerHTML='';
-
-        try{
-            const qs=[];
-            const pid=activePersonId();
-            if(pid) qs.push('personId='+encodeURIComponent(pid));
-            qs.push('pageSize=100'); // backend może to respektować
-            const url='/api/tuya/devices'+(qs.length?('?'+qs.join('&')):'');
-            const r=await fetch(url);
-            if(!r.ok) throw new Error(await r.text());
-            const data=await r.json();
-            const raw=data?.devices ?? data?.result ?? data?.list ?? [];
-            const devices=Array.isArray(raw)?raw:(raw?.list ?? raw?.devices ?? []);
-            console.log('[TUYA] devices:', devices.length, (devices||[]).map(d=>deviceIdOf(d)));
-            if(!Array.isArray(devices) || devices.length===0){
-                list.innerHTML='<p class="text-center text-gray-500 py-4">Nie znaleziono żadnych urządzeń.</p>';
-                return;
-            }
-            list.innerHTML=devices.map(renderDeviceCard).join('');
-        }catch(e){
-            list.innerHTML=`<p class="text-center text-red-500 py-4">Błąd: ${e?.message||e}</p>`;
-        }finally{
-            loading.style.display='none';
-            lucide.createIcons();
-        }
-    }
-
-    async function sendTuyaCommand(ev){
-        const btn=ev?.currentTarget;
-        if(!btn) return;
-        const devId=btn.dataset.id;
-        const code=btn.dataset.code;
-        const next=btn.dataset.next==='true';
-
-        const card=document.getElementById(`dev-${devId}`);
-        card?.querySelectorAll('button[data-id]').forEach(b=>{ b.disabled=true; b.classList.add('opacity-60','cursor-not-allowed'); });
-
-        const body=JSON.stringify({ commands:[{ code, value:next }] });
-        const pid=activePersonId();
-        const tail = pid?`?personId=${encodeURIComponent(pid)}`:'';
-
-        let ok=false, err=null;
-        for(const path of [
-            `/api/tuya/devices/${encodeURIComponent(devId)}/command${tail}`,
-            `/api/tuya/devices/${encodeURIComponent(devId)}/commands${tail}`
-        ]){
-            try{
-                const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body});
-                if(r.ok){ ok=true; break; } else err=await r.text();
-            }catch(e){ err=e?.message||String(e); }
-        }
-
-        async function pollSingle(maxMs=7000){
-            const start=Date.now();
-            while(Date.now()-start<maxMs){
-                try{
-                    let rr=await fetch(`/api/tuya/devices/${encodeURIComponent(devId)}${tail}`);
-                    if(rr.ok){
-                        const d=await rr.json();
-                        updateCardFromDevice(d?.device||d);
-                        return;
-                    }else{
-                        rr=await fetch(`/api/tuya/devices${tail?('&'+tail.slice(1)):'?pageSize=100'}`);
-                        if(rr.ok){
-                            const jd=await rr.json();
-                            const raw=jd?.devices ?? jd?.result ?? jd?.list ?? [];
-                            const ds=Array.isArray(raw)?raw:(raw?.list ?? raw?.devices ?? []);
-                            const d=(ds||[]).find(x=>deviceIdOf(x)===devId);
-                            if(d){ updateCardFromDevice(d); return; }
+                        // === POPRAWKA #3: Przywracamy logikę 'isOn' ===
+                        // 'device.status' jest teraz listą [{code: "switch_1", value: true}, ...]
+                        if (device.status && device.status.length > 0) {
+                            const switch1 = device.status.find(s => s.code === 'switch_1');
+                            if (switch1) {
+                                isOn = switch1.value;
+                                switchCode = 'switch_1';
+                            } else {
+                                // Spróbuj znaleźć inny przełącznik, np. dla listwy
+                                const switchLed = device.status.find(s => s.code === 'switch_led');
+                                if (switchLed) {
+                                    isOn = switchLed.value;
+                                    switchCode = 'switch_led';
+                                }
+                            }
                         }
-                    }
-                }catch(_){}
-                await new Promise(r=>setTimeout(r,600));
-            }
+
+                        const deviceHtml = `
+                                <div class="p-4 border rounded-lg flex justify-between items-center ${isOnline ? 'bg-white' : 'bg-gray-100 opacity-60'}">
+                                    <span class="font-medium ${isOnline ? 'text-gray-800' : 'text-gray-500'}">
+                                        <i data-lucide="zap" class="w-4 h-4 inline-block ${isOn ? 'text-yellow-500' : 'text-gray-400'}"></i>
+                                        ${device.name}
+                                        ${isOnline ? '' : ' (Offline)'}
+                                    </span>
+
+                                    <button
+                                        onclick="sendTuyaCommand(event, '${device.id}', '${switchCode}', ${!isOn})"
+                                        class="${isOn ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'} px-4 py-1 rounded-full text-sm font-medium"
+                                        ${isOnline ? '' : 'disabled'}>
+                                        ${isOn ? 'Wyłącz' : 'Włącz'}
+                                    </button>
+                                </div>
+                            `;
+                        listContainer.insertAdjacentHTML('beforeend', deviceHtml);
+                    });
+                } else {
+                    // Ten komunikat jest teraz poprawny
+                    listContainer.innerHTML = '<p class="text-center text-gray-500">Nie znaleziono żadnych urządzeń powiązanych z tym kontem.</p>';
+                }
+                lucide.createIcons();
+            })
+            .catch(error => {
+                console.error('Błąd pobierania urządzeń Tuya:', error);
+                loadingDiv.style.display = 'none';
+                listContainer.innerHTML = `<p class="text-center text-red-500">Wystąpił błąd: ${error.message}</p>`;
+            });
+    }
+
+    // Funkcja do wysyłania poleceń (bez zmian, była już poprawna)
+    function sendTuyaCommand(event, deviceId, code, value) {
+        if (event && event.target) {
+            event.target.disabled = true;
+            event.target.textContent = '...';
+        }
+
+        const bodyPayload = {
+            commands: [
+                { code: code, value: value }
+            ]
+        };
+
+        fetch(`/api/tuya/devices/${deviceId}/command`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(bodyPayload)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Błąd serwera przy wysyłaniu polecenia.');
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('Polecenie wysłane:', result);
+                // Po sekundzie odśwież listę, aby zobaczyć nowy status
+                setTimeout(loadTuyaDevices, 1000);
+            })
+            .catch(error => {
+                console.error('Błąd wysyłania polecenia Tuya:', error);
+                // W razie błędu odśwież listę, aby przywrócić przyciski
+                setTimeout(loadTuyaDevices, 1000);
+            });
+    }
+
+    // --- ZAKTUALIZOWANA LOGIKA STARTOWA ---
+    document.addEventListener('DOMContentLoaded', () => {
+
+        if (document.getElementById('recurrenceType')) {
+            toggleTaskOptions();
+        }
+
+        // Ukryj wszystkie modale przy starcie
+        document.getElementById('addPersonFormContainer').style.display = 'none';
+        document.getElementById('addTransactionModalContainer').style.display = 'none';
+        document.getElementById('addTaskModalContainer').style.display = 'none';
+
+        // Załaduj urządzenia Tuya przy starcie (jeśli kontener istnieje)
+        if (document.getElementById('tuya-devices-list')) {
             loadTuyaDevices();
         }
 
-        if(ok){ pollSingle(); }
-        else{ console.error('Błąd komendy Tuya:', err); pollSingle(3000); }
-    }
-    window.sendTuyaCommand=sendTuyaCommand;
-
-    function updateCardFromDevice(device){
-        if(!device) return;
-        const id=deviceIdOf(device);
-        const el=document.getElementById(`dev-${id}`);
-        if(!el){ loadTuyaDevices(); return; }
-        const fresh=document.createElement('div');
-        fresh.innerHTML=renderDeviceCard(device);
-        el.replaceWith(fresh.firstElementChild);
-        lucide.createIcons();
-    }
-
-    function onDevicePush(payload){
-        if(payload?.status || payload?.status_list) updateCardFromDevice(payload);
-        else if(payload?.device) updateCardFromDevice(payload.device);
-    }
-    window.tuyaRefresh?.subscribe?.(onDevicePush);
-
-    function initializeViewSwitcher(){
-        const buttons=$$('.view-toggle');
-        const views={ finance:$('#finance-view'), home:$('#home-view') };
-        const navTitle=$('#nav-title');
-        function activate(target){
-            Object.entries(views).forEach(([k,el])=>{ if(!el) return; el.classList.toggle('hidden', k!==target); });
-            buttons.forEach(b=>{
-                const active=b.dataset.viewTarget===target;
-                const baseText=b.dataset.viewTarget==='home'?'text-cyan-600':'text-indigo-600';
-                const activeBg=b.dataset.viewTarget==='home'?'bg-cyan-600':'bg-indigo-600';
-                b.classList.remove('bg-indigo-600','bg-cyan-600','text-white','shadow-md','text-indigo-600','text-cyan-600');
-                b.classList.add(baseText);
-                if(active){ b.classList.add(activeBg,'text-white','shadow-md'); b.classList.remove(baseText); b.setAttribute('aria-pressed','true'); }
-                else b.setAttribute('aria-pressed','false');
-            });
-            if(navTitle) navTitle.textContent = target==='home' ? 'Sterowanie Domem' : 'Asystent Finansów';
-        }
-        buttons.forEach(b=>b.addEventListener('click',()=>activate(b.dataset.viewTarget)));
-        activate('home');
-    }
-
-    document.addEventListener('DOMContentLoaded', ()=>{
-        initializeViewSwitcher();
-        if($('#recurrenceType')) toggleTaskOptions('rec');
-        $('#addPersonFormContainer').classList.add('hidden');
-        $('#addTransactionModalContainer')?.classList.add('hidden');
-        $('#addTaskModalContainer')?.classList.add('hidden');
-        if($('#tuya-devices-list')) loadTuyaDevices();
         lucide.createIcons();
     });
 </script>
-
 </body>
 </html>
