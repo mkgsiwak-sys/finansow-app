@@ -1,157 +1,52 @@
 package com.example.finansow.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
+import java.util.Map;
 
-/**
- * Kontener na wszystkie rekordy DTO używane do komunikacji z Tuya API.
- */
 public final class TuyaApiDtos {
 
-    // --- Token ---
+    // --- TOKEN ---
+    public record TuyaTokenResponse(boolean success, long t, String tid, Integer code, String msg,
+                                    TuyaTokenResult result) {}
+    public record TuyaTokenResult(String accessToken, String refreshToken, long expiresIn, String uid) {}
 
-    public record TuyaToken(
-            String accessToken,
-            String refreshToken,
-            long expiresAtMillis,
-            String uid
-    ) {
-        public boolean isExpired() {
-            long safetyMargin = 60 * 1000; // 60 sekund
-            return System.currentTimeMillis() > (expiresAtMillis - safetyMargin);
+    public static final class TuyaToken {
+        private final String accessToken;
+        private final String refreshToken;
+        private final long expiresAtMs;
+        private final String uid;
+
+        public TuyaToken(String accessToken, String refreshToken, long expiresAtMs, String uid) {
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+            this.expiresAtMs = expiresAtMs;
+            this.uid = uid;
         }
+        public String accessToken() { return accessToken; }
+        public String refreshToken() { return refreshToken; }
+        public String uid() { return uid; }
+        public boolean isExpired() { return System.currentTimeMillis() > (expiresAtMs - 60_000L); }
     }
 
-    public record TuyaTokenResult(
-            @JsonProperty("access_token") String accessToken,
-            @JsonProperty("refresh_token") String refreshToken,
-            @JsonProperty("expires_in") int expiresIn,
-            String uid
-    ) {}
+    public record TuyaErrorResponse(Integer code, String msg) {}
 
-    public record TuyaTokenResponse(
-            TuyaTokenResult result,
-            boolean success,
-            long t,
-            String tid,
-            Integer code,
-            String msg
-    ) {}
-
-
-    // --- Urządzenia (Devices) ---
-
-    /**
-     * DTO dla pierwotnej odpowiedzi z /v2.0/cloud/thing/device
-     * Zawiera nieaktualny status 'online'.
-     */
+    // --- DEVICES / STATUS / COMMANDS ---
     public record TuyaDevice(
-            String id,
-            String name,
-            String productName,
-            boolean online, // Ten status jest często nieaktualny!
-            String model,
-            String ip,
-            String localKey,
-            long activeTime,
-            long createTime,
-            long updateTime
+            String id, String name, String productName, boolean online,
+            String model, String ip, String localKey,
+            long activeTime, long createTime, long updateTime
     ) {}
 
-    /**
-     * Główna odpowiedź API podczas pobierania listy urządzeń v2.0.
-     */
-    public record TuyaDeviceListResponse(
-            List<TuyaDevice> result,
-            boolean success,
-            long t,
-            String tid,
-            Integer code,
-            String msg
-    ) {}
-
-    // --- Status Urządzenia (Pojedynczy) ---
-
-    /**
-     * Reprezentacja pojedynczego statusu (np. "switch_1": true)
-     */
-    public record TuyaDeviceStatus(
-            String code,
-            Object value // Może być boolean, int, string itp.
-    ) {}
-
-    /**
-     * DTO dla odpowiedzi z endpointu /v1.0/devices/{id}/status (pojedyncze urządzenie)
-     */
     public record TuyaDeviceStatusResponse(
-            List<TuyaDeviceStatus> result,
-            boolean success,
-            long t,
-            String tid,
-            Integer code,
-            String msg
+            boolean success, Integer code, String msg, List<Map<String, Object>> result
     ) {}
 
+    public record TuyaCommandRequest(List<Map<String, Object>> commands) {}
+    public record TuyaCommandResponse(boolean success, Integer code, String msg, Object result) {}
 
-    // ===================================================================
-    // === NOWE REKORDY DLA POPRAWKI STATUSU "ONLINE" (Wersja 2) ===
-    // ===================================================================
-
-    /**
-     * NOWY: Scalony obiekt, który wysyłamy do frontendu.
-     * Zawiera nazwę z v2.0 oraz realny status 'online' i 'status' z v1.0.
-     */
-    public record TuyaDeviceMerged(
-            String id,
-            String name,
-            String productName,
-            boolean online, // Poprawiony, realny status
-            List<TuyaDeviceStatus> status // Lista statusów, np. switch_1
-    ) {}
-
-    /**
-     * NOWY: Główna odpowiedź, którą /api/tuya/devices wysyła teraz do frontendu.
-     */
+    // --- MERGED DTO for UI ---
+    public record TuyaDeviceMerged(String id, String name, String productName, boolean success, Object result) {}
     public record TuyaDeviceMergedListResponse(
-            List<TuyaDeviceMerged> result,
-            boolean success,
-            long t,
-            String tid,
-            Integer code,
-            String msg
-    ) {}
-
-    // ===================================================================
-
-
-    // --- Komendy ---
-
-    public record TuyaCommand(
-            String code,
-            Object value
-    ) {}
-
-    public record TuyaCommandRequest(
-            List<TuyaCommand> commands
-    ) {}
-
-    public record TuyaCommandResponse(
-            boolean result,
-            boolean success,
-            long t,
-            String tid,
-            Integer code,
-            String msg
-    ) {}
-
-    /**
-     * Ogólna odpowiedź błędu z Tuya API.
-     */
-    public record TuyaErrorResponse(
-            int code,
-            String msg,
-            boolean success,
-            long t,
-            String tid
+            List<TuyaDeviceMerged> merged, boolean success, long t, String tid, Integer code, String msg
     ) {}
 }

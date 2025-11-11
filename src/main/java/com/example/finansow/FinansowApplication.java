@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties(TuyaConfig.class) // <<< DODANE: Włączanie konfiguracji Tuya
 // <<< USUNIĘTE: Adnotacja @ConnectorScan Tuya SDK >>>
 // @ConnectorScan(basePackages = "com.tuya.cloud.openapi.service")
+
 public class FinansowApplication {
 
     public static void main(String[] args) {
